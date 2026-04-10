@@ -36,5 +36,10 @@
     "tsx": "^4.21.0",
     "typescript": "^5.5.4",
     "typescript-eslint": "^8.58.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "serialize-javascript": ">=7.0.5"
+    }
   }
 }
