@@ -1,0 +1,26 @@
+{
+  "name": "@formo/cli",
+  "version": "0.1.0",
+"description": "Formo API CLI — query profiles and analytics data",
+  "bin": {
+    "formo": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "axios": "^1.7.0",
+    "incur": "^0.3.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4",
+    "vitest": "^2.1.9"
+  }
+}
