@@ -111,7 +111,7 @@ Multiple conditions are combined with `AND` logic.
 Execute a SQL query against your Formo analytics data (events, sessions, wallet profiles).
 
 ```bash
-formo query run "<sql>"
+formo query "<sql>"
 ```
 
 > Requires `query:read` scope on your API key.
@@ -119,13 +119,13 @@ formo query run "<sql>"
 **Examples:**
 ```bash
 # Count total events
-formo query run "SELECT count(*) FROM events"
+formo query "SELECT count(*) FROM events"
 
 # Top 10 wallets by net worth
-formo query run "SELECT address, net_worth_usd FROM wallet_profiles ORDER BY net_worth_usd DESC LIMIT 10"
+formo query "SELECT address, net_worth_usd FROM wallet_profiles ORDER BY net_worth_usd DESC LIMIT 10"
 
 # Recent sessions
-formo query run "SELECT address, last_seen FROM wallet_profiles ORDER BY last_seen DESC LIMIT 5"
+formo query "SELECT address, last_seen FROM wallet_profiles ORDER BY last_seen DESC LIMIT 5"
 ```
 
 ---

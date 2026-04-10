@@ -1,7 +1,7 @@
 {
   "name": "@formo/cli",
   "version": "0.1.0",
-"description": "Formo API CLI — query profiles and analytics data",
+  "description": "Formo API CLI — query profiles and analytics data",
   "bin": {
     "formo": "dist/index.js"
   },
@@ -10,17 +10,28 @@
     "build": "tsc",
     "dev": "ts-node src/index.ts",
     "start": "node dist/index.js",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "test": "mocha",
+    "test:watch": "mocha --watch"
   },
   "dependencies": {
     "axios": "^1.7.0",
     "incur": "^0.3.4"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/chai": "^5.2.3",
+    "@types/mocha": "^10.0.10",
     "@types/node": "^20.0.0",
+    "chai": "^6.2.2",
+    "dotenv": "^17.4.1",
+    "eslint": "^10.2.0",
+    "globals": "^17.4.0",
+    "mocha": "^11.7.5",
     "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.5.4",
-    "vitest": "^2.1.9"
+    "typescript-eslint": "^8.58.1"
   }
 }

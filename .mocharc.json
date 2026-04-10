@@ -1,0 +1,6 @@
+{
+  "spec": "test/**/*.test.ts",
+  "timeout": 15000,
+  "extension": ["ts"],
+  "node-option": ["require=./test/preload.cjs", "import=tsx"]
+}

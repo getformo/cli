@@ -7,7 +7,7 @@ import { charts } from './commands/charts';
 import { contracts } from './commands/contracts';
 import { importCmd } from './commands/import';
 import { profiles } from './commands/profiles';
-import { query } from './commands/query';
+import { queryRunRun } from './commands/query';
 import { segments } from './commands/segments';
 import { clearConfig, getApiKey, readConfig, saveConfig } from './lib/config';
 import { banner, color, error, info, success, warn } from './lib/ui';
@@ -285,10 +285,33 @@ cli.command('status', {
   },
 });
 
+// ── query ──
+
+cli.command('query', {
+  description: 'Run a SQL query against your Formo analytics data',
+  args: z.object({
+    sql: z.string().describe('SQL query string to execute'),
+  }),
+  options: z.object({}),
+  examples: [
+    {
+      args: { sql: 'SELECT count(*) FROM events' },
+      description: 'Count all events',
+    },
+    {
+      args: { sql: 'SELECT address, net_worth_usd FROM wallet_profiles ORDER BY net_worth_usd DESC LIMIT 10' },
+      description: 'Top 10 wallets by net worth',
+    },
+  ],
+  hint: 'Requires query:read scope on your API key.',
+  run({ args }) {
+    return queryRunRun(args.sql)
+  },
+});
+
 // ── command groups ──
 
 cli.command(profiles);
-cli.command(query);
 cli.command(alerts);
 cli.command(boards);
 cli.command(charts);
