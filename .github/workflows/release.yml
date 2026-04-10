@@ -1,0 +1,167 @@
+name: Publish Package
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  id-token: write  # Required for npm provenance attestation
+  contents: write  # Required for creating GitHub releases
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Verify tag is on main branch
+        run: |
+          git fetch origin main
+          if ! git merge-base --is-ancestor ${{ github.sha }} origin/main; then
+            echo "❌ Tag is not on the main branch — aborting release"
+            exit 1
+          fi
+          echo "✅ Tag is on main branch"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v4.3.0
+        with:
+          node-version: "22.14.0"
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Publishing version: $VERSION"
+
+      - name: Verify tag matches package.json version
+        run: |
+          TAG_VERSION=${{ steps.version.outputs.version }}
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "❌ Tag v$TAG_VERSION does not match package.json version $PKG_VERSION"
+            exit 1
+          fi
+          echo "✅ Version confirmed: $TAG_VERSION"
+
+      - name: Build
+        run: pnpm build
+
+      - name: Test
+        run: pnpm test
+        env:
+          TEST_TOKEN: ${{ secrets.TEST_TOKEN }}
+
+      - name: Publish to npm
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          CURRENT_TAG=${{ github.ref_name }}
+          PREV_TAG=$(git tag -l 'v*' --sort=-version:refname | grep -v "^${CURRENT_TAG}$" | head -1)
+          RELEASE_DATE=$(date +%Y-%m-%d)
+          VERSION=${{ steps.version.outputs.version }}
+
+          if [ -n "$PREV_TAG" ]; then
+            COMMITS=$(git log ${PREV_TAG}..HEAD --pretty=format:"%s    %h" --no-merges)
+          else
+            COMMITS=$(git log --pretty=format:"%s    %h" --no-merges)
+          fi
+
+          FEATURES=""
+          FIXES=""
+          OTHER=""
+
+          while IFS=$'\t' read -r message hash; do
+            [ -z "$message" ] && continue
+            if [[ $message =~ \(#([0-9]+)\) ]]; then
+              PR_NUM="${BASH_REMATCH[1]}"
+              CLEAN_MESSAGE=$(echo "$message" | sed -E 's/ ?\(#[0-9]+\)//')
+              PR_LINK="[#$PR_NUM](https://github.com/${{ github.repository }}/pull/$PR_NUM)"
+              COMMIT_LINK="[$hash](https://github.com/${{ github.repository }}/commit/$hash)"
+              ITEM="$CLEAN_MESSAGE ($PR_LINK) ($COMMIT_LINK)"
+            else
+              COMMIT_LINK="[$hash](https://github.com/${{ github.repository }}/commit/$hash)"
+              ITEM="$message ($COMMIT_LINK)"
+            fi
+
+            if [[ $message =~ ^feat(\([^\)]+\))?: ]]; then
+              STRIPPED=$(echo "$ITEM" | sed -E 's/^feat(\([^)]+\))?: //')
+              FEATURES="${FEATURES}- ${STRIPPED}
+          "
+            elif [[ $message =~ ^fix(\([^\)]+\))?: ]]; then
+              STRIPPED=$(echo "$ITEM" | sed -E 's/^fix(\([^)]+\))?: //')
+              FIXES="${FIXES}- ${STRIPPED}
+          "
+            else
+              OTHER="${OTHER}- ${ITEM}
+          "
+            fi
+          done <<< "$COMMITS"
+
+          cat > release_notes.md <<EOF
+          $VERSION ($RELEASE_DATE)
+          EOF
+
+          if [ -n "$FEATURES" ]; then
+            cat >> release_notes.md <<EOF
+
+          ## Features
+
+          $FEATURES
+          EOF
+          fi
+
+          if [ -n "$FIXES" ]; then
+            cat >> release_notes.md <<EOF
+
+          ## Bug Fixes
+
+          $FIXES
+          EOF
+          fi
+
+          if [ -n "$OTHER" ]; then
+            cat >> release_notes.md <<EOF
+
+          ## Changes
+
+          $OTHER
+          EOF
+          fi
+
+          cat >> release_notes.md <<EOF
+
+          ## Install
+
+          \`\`\`bash
+          npm install -g @formo/cli@$VERSION
+          \`\`\`
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2.6.1
+        with:
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
