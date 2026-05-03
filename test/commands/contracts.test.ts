@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { listContractsRun, createContractRun, updateContractRun } from '../../src/commands/contracts';
 
-// Response shape: { contracts: Contract[], deployAt?, deployDiff? } for list
+// Response shape: PaginatedResponse<Contract> + { deploy: { last_deployed_at, diff } } for list
 // (bare resource — no envelope).
 
 const TEST_ABI = JSON.stringify([{ type: 'event', name: 'Transfer', inputs: [] }]);
@@ -9,9 +9,17 @@ const TEST_EVENTS = JSON.stringify({ Transfer: true });
 
 describe('commands/contracts', function () {
   describe('listContractsRun()', function () {
-    it('returns an array of contracts', async function () {
-      const res = await listContractsRun() as { contracts: unknown[] };
-      expect(res.contracts).to.be.an('array');
+    it('returns paginated contracts with deploy status', async function () {
+      const res = await listContractsRun() as {
+        data: unknown[];
+        deploy: { last_deployed_at: string | null; diff: unknown[] };
+        total: number;
+        has_more: boolean;
+      };
+      expect(res.data).to.be.an('array');
+      expect(res.deploy).to.have.property('diff');
+      expect(res).to.have.property('total');
+      expect(res).to.have.property('has_more');
     });
   });
 

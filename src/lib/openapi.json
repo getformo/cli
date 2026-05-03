@@ -33,6 +33,29 @@
       }
     },
     "schemas": {
+      "PaginatedListMeta": {
+        "type": "object",
+        "description": "Pagination cursor returned alongside `data` on every paginated list endpoint. Use these to walk pages: `has_more` is true while `page * size < total`. Combine with the matching `Page` and `Size` query parameters to request the next page.",
+        "required": ["page", "size", "total", "has_more"],
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "1-indexed page number echoed from the request."
+          },
+          "size": {
+            "type": "integer",
+            "description": "Page size echoed from the request."
+          },
+          "total": {
+            "type": "integer",
+            "description": "Total row count across all pages."
+          },
+          "has_more": {
+            "type": "boolean",
+            "description": "True when more pages remain (`page * size < total`)."
+          }
+        }
+      },
       "Error": {
         "type": "object",
         "description": "Standard error envelope returned by every public API endpoint for any non-2xx response. The HTTP status code carries success/failure; the body provides a machine-readable `code`, a human-readable `message`, and a `doc_url` pointing at the matching section of the docs so agents can fetch context on the fly.",
@@ -1502,6 +1525,29 @@
         },
         "description": "Optional unique value (e.g. a UUID v4) that lets you safely retry POST/PUT/PATCH/DELETE requests. The first request runs normally; subsequent requests with the same key replay the stored response (status + body) for 24 hours, so retries can never double-create or double-charge. Two concurrent requests with the same key return `409 IDEMPOTENCY_IN_PROGRESS`. Generate a fresh key per logical operation."
       },
+      "Page": {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        },
+        "description": "1-indexed page number. Defaults to 1."
+      },
+      "Size": {
+        "name": "size",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200,
+          "default": 100
+        },
+        "description": "Page size. Defaults to 100, capped at 200."
+      },
       "AnalyticsDateFrom": {
         "name": "date_from",
         "in": "query",
@@ -1717,21 +1763,34 @@
       "get": {
         "operationId": "listAlerts",
         "summary": "List alerts",
-        "description": "List all alerts for the project scoped to the API key.",
+        "description": "List alerts for the project scoped to the API key. Paginated: see `page` and `size` query params; the response carries `total` and `has_more` so callers can walk pages.",
         "tags": [
           "Alerts"
         ],
         "x-required-scope": "alerts:read",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Size" }
+        ],
         "responses": {
           "200": {
-            "description": "List of alerts",
+            "description": "Paginated list of alerts",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Alert"
-                  }
+                  "allOf": [
+                    { "$ref": "#/components/schemas/PaginatedListMeta" },
+                    {
+                      "type": "object",
+                      "required": ["data"],
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/Alert" }
+                        }
+                      }
+                    }
+                  ]
                 },
                 "example": {
                   "data": [
@@ -1757,15 +1816,11 @@
                       "recipient": [
                         {
                           "type": "email",
-                          "value": [
-                            "alerts@myapp.com"
-                          ]
+                          "value": ["alerts@myapp.com"]
                         },
                         {
                           "type": "slack",
-                          "value": [
-                            "C0123456789"
-                          ]
+                          "value": ["C0123456789"]
                         }
                       ],
                       "has_secret": false,
@@ -1773,11 +1828,10 @@
                       "updated_at": "2026-04-25T14:01:55.000Z"
                     }
                   ],
-                  "meta": {
-                    "total": 1,
-                    "limit": 50,
-                    "offset": 0
-                  }
+                  "page": 1,
+                  "size": 100,
+                  "total": 1,
+                  "has_more": false
                 }
               }
             }
@@ -2289,19 +2343,33 @@
       "get": {
         "operationId": "listBoards",
         "summary": "List boards",
+        "description": "List boards for the project scoped to the API key. Paginated.",
         "tags": [
           "Boards"
         ],
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Size" }
+        ],
         "responses": {
           "200": {
-            "description": "List of boards",
+            "description": "Paginated list of boards",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Board"
-                  }
+                  "allOf": [
+                    { "$ref": "#/components/schemas/PaginatedListMeta" },
+                    {
+                      "type": "object",
+                      "required": ["data"],
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/Board" }
+                        }
+                      }
+                    }
+                  ]
                 },
                 "example": {
                   "data": [
@@ -2324,11 +2392,10 @@
                       "updated_at": "2026-04-19T10:55:02.000Z"
                     }
                   ],
-                  "meta": {
-                    "total": 2,
-                    "limit": 50,
-                    "offset": 0
-                  }
+                  "page": 1,
+                  "size": 100,
+                  "total": 2,
+                  "has_more": false
                 }
               }
             }
@@ -2339,7 +2406,7 @@
       "post": {
         "operationId": "createBoard",
         "summary": "Create board",
-        "description": "Create a new empty board.",
+        "description": "Create a new board with the given title.",
         "tags": [
           "Boards"
         ],
@@ -2349,7 +2416,28 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "properties": {}
+                "required": ["title"],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Human-readable board name. Required."
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Optional longer description."
+                  },
+                  "isPublic": {
+                    "type": "boolean",
+                    "description": "Whether the board is publicly viewable via its share URL. Defaults to false.",
+                    "default": false
+                  }
+                }
+              },
+              "example": {
+                "title": "Weekly KPIs",
+                "description": "Headline metrics for the team standup.",
+                "isPublic": false
               }
             }
           }
@@ -2520,6 +2608,7 @@
       "get": {
         "operationId": "listCharts",
         "summary": "List charts for a board",
+        "description": "List charts in a board with their executed query results. Paginated. Includes the parent `board` for caller convenience and an optional `warnings` sidecar carrying per-chart query failures (the failing charts are excluded from `data` so the page renders cleanly).",
         "tags": [
           "Charts"
         ],
@@ -2531,26 +2620,47 @@
             "schema": {
               "type": "string"
             }
-          }
+          },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Size" }
         ],
         "responses": {
           "200": {
-            "description": "Charts with executed query results",
+            "description": "Paginated charts plus parent board and any partial-failure warnings",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "charts": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Chart"
+                  "allOf": [
+                    { "$ref": "#/components/schemas/PaginatedListMeta" },
+                    {
+                      "type": "object",
+                      "required": ["data", "board"],
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/Chart" }
+                        },
+                        "board": { "$ref": "#/components/schemas/Board" },
+                        "warnings": {
+                          "type": "object",
+                          "description": "Present only if some charts failed to execute. Failures are excluded from `data`.",
+                          "properties": {
+                            "failedCharts": { "type": "integer" },
+                            "errors": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "chartId": { "type": "string" },
+                                  "error": { "type": "string" }
+                                }
+                              }
+                            }
+                          }
+                        }
                       }
-                    },
-                    "board": {
-                      "$ref": "#/components/schemas/Board"
                     }
-                  }
+                  ]
                 },
                 "example": {
                   "data": [
@@ -2563,18 +2673,22 @@
                       "description": null,
                       "query": "SELECT toDate(timestamp) AS day, sum(revenue) AS revenue FROM events WHERE event = 'transaction' AND timestamp >= now() - INTERVAL 30 DAY GROUP BY day ORDER BY day",
                       "x_axis": "day",
-                      "y_axis": [
-                        "revenue"
-                      ],
+                      "y_axis": ["revenue"],
                       "group_by": null,
                       "steps": null,
                       "settings": null
                     }
                   ],
-                  "meta": {
-                    "total": 1,
-                    "limit": 50,
-                    "offset": 0
+                  "page": 1,
+                  "size": 100,
+                  "total": 1,
+                  "has_more": false,
+                  "board": {
+                    "id": "brd_a1b2c3d4e5f6",
+                    "project_id": "proj_abc123",
+                    "title": "Revenue Dashboard",
+                    "description": "Weekly revenue, conversion, and retention metrics.",
+                    "enabled": false
                   }
                 }
               }
@@ -2898,8 +3012,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "string",
-                  "description": "Chart ID"
+                  "$ref": "#/components/schemas/Chart"
                 }
               }
             }
@@ -3048,35 +3161,52 @@
       "get": {
         "operationId": "listContracts",
         "summary": "List contracts",
+        "description": "List monitored contracts. Paginated; the canonical `data` array carries the contracts for the current page. The `deploy` sidecar reports the project-wide deploy state (always reflects ALL contracts, not just this page) so callers can render \"X contracts pending deploy\" without a second request.",
         "tags": [
           "Contracts"
         ],
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Size" }
+        ],
         "responses": {
           "200": {
-            "description": "Contracts with deployment diff info",
+            "description": "Paginated list of contracts plus deploy-state sidecar",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "contracts": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Contract"
-                      }
-                    },
-                    "deployAt": {
-                      "type": "string",
-                      "format": "date-time",
-                      "nullable": true
-                    },
-                    "deployDiff": {
-                      "type": "array",
-                      "items": {
-                        "type": "object"
+                  "allOf": [
+                    { "$ref": "#/components/schemas/PaginatedListMeta" },
+                    {
+                      "type": "object",
+                      "required": ["data", "deploy"],
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/Contract" }
+                        },
+                        "deploy": {
+                          "type": "object",
+                          "required": ["last_deployed_at", "diff"],
+                          "properties": {
+                            "last_deployed_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true,
+                              "description": "Timestamp of the project's last successful deploy, or null if no deploy has run yet."
+                            },
+                            "diff": {
+                              "type": "array",
+                              "description": "Difference between the contracts currently registered for the project and what's actually deployed. Drives the \"contracts pending deploy\" UI.",
+                              "items": {
+                                "type": "object"
+                              }
+                            }
+                          }
+                        }
                       }
                     }
-                  }
+                  ]
                 },
                 "example": {
                   "data": [
@@ -3143,10 +3273,13 @@
                       ]
                     }
                   ],
-                  "meta": {
-                    "total": 2,
-                    "limit": 50,
-                    "offset": 0
+                  "page": 1,
+                  "size": 100,
+                  "total": 2,
+                  "has_more": false,
+                  "deploy": {
+                    "last_deployed_at": "2026-04-22T08:14:31.000Z",
+                    "diff": []
                   }
                 }
               }
@@ -3284,6 +3417,54 @@
       }
     },
     "/v0/contracts/{chain}/{address}": {
+      "get": {
+        "operationId": "getContract",
+        "summary": "Get contract",
+        "description": "Fetch a single monitored contract by chain ID and address. Returns the bare `Contract` resource (no envelope).",
+        "tags": [
+          "Contracts"
+        ],
+        "parameters": [
+          {
+            "name": "chain",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "EVM chain ID (e.g. `1` for Ethereum mainnet, `8453` for Base)."
+          },
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^0x[0-9a-fA-F]{40}$"
+            },
+            "description": "Contract address (0x-prefixed, 40 hex chars)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contract found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Contract"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalServerError" }
+        },
+        "x-required-scope": "contracts:read"
+      },
       "put": {
         "operationId": "updateContract",
         "summary": "Update contract",
@@ -3406,19 +3587,33 @@
       "get": {
         "operationId": "listSegments",
         "summary": "List segments",
+        "description": "List user segments for the project scoped to the API key. Paginated.",
         "tags": [
           "Segments"
         ],
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Size" }
+        ],
         "responses": {
           "200": {
-            "description": "List of segments",
+            "description": "Paginated list of segments",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Segment"
-                  }
+                  "allOf": [
+                    { "$ref": "#/components/schemas/PaginatedListMeta" },
+                    {
+                      "type": "object",
+                      "required": ["data"],
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/Segment" }
+                        }
+                      }
+                    }
+                  ]
                 },
                 "example": {
                   "data": [
@@ -3432,11 +3627,10 @@
                       ]
                     }
                   ],
-                  "meta": {
-                    "total": 1,
-                    "limit": 50,
-                    "offset": 0
-                  }
+                  "page": 1,
+                  "size": 100,
+                  "total": 1,
+                  "has_more": false
                 }
               }
             }
@@ -3622,38 +3816,31 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "total",
-                    "page",
-                    "size",
-                    "has_more"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Profile"
+                  "allOf": [
+                    { "$ref": "#/components/schemas/PaginatedListMeta" },
+                    {
+                      "type": "object",
+                      "required": ["data"],
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/Profile" }
+                        }
                       }
-                    },
-                    "total": {
-                      "type": "integer",
-                      "description": "Total number of profiles across all pages."
-                    },
-                    "page": {
-                      "type": "integer",
-                      "description": "1-indexed page number echoed from the request."
-                    },
-                    "size": {
-                      "type": "integer",
-                      "description": "Page size echoed from the request."
-                    },
-                    "has_more": {
-                      "type": "boolean",
-                      "description": "True if there is at least one more page after this one."
                     }
-                  }
+                  ]
+                },
+                "example": {
+                  "data": [
+                    {
+                      "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+                      "net_worth_usd": 12345.67
+                    }
+                  ],
+                  "page": 1,
+                  "size": 100,
+                  "total": 1,
+                  "has_more": false
                 }
               }
             }

@@ -2,24 +2,32 @@ import { expect } from 'chai';
 import { listBoardsRun } from '../../src/commands/boards';
 import { listChartsRun, getChartRun, createChartRun, updateChartRun } from '../../src/commands/charts';
 
-// Response shape: { charts: Chart[], board: Board } for list, Chart for get
-// (bare resource — no envelope).
+// Response shape: PaginatedResponse<Chart> + { board, warnings? } for list,
+//                 Chart for get (bare resource — no envelope).
 
 describe('commands/charts', function () {
   let boardId: string | undefined;
   let firstChartId: string | undefined;
 
   before(async function () {
-    const res = await listBoardsRun() as { id: string }[];
-    if (res.length > 0) boardId = res[0].id;
+    const res = await listBoardsRun() as { data: { id: string }[] };
+    if (res.data.length > 0) boardId = res.data[0].id;
   });
 
   describe('listChartsRun()', function () {
-    it('returns charts for a board', async function () {
+    it('returns paginated charts for a board with the parent board', async function () {
       if (!boardId) return this.skip();
-      const res = await listChartsRun(boardId) as { charts: { id: string }[] };
-      expect(res.charts).to.be.an('array');
-      if (res.charts.length > 0) firstChartId = res.charts[0].id;
+      const res = await listChartsRun(boardId) as {
+        data: { id: string }[];
+        board: { id: string };
+        total: number;
+        has_more: boolean;
+      };
+      expect(res.data).to.be.an('array');
+      expect(res.board).to.have.property('id');
+      expect(res).to.have.property('total');
+      expect(res).to.have.property('has_more');
+      if (res.data.length > 0) firstChartId = res.data[0].id;
     });
   });
 

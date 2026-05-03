@@ -1,16 +1,19 @@
 import { expect } from 'chai';
 import { listBoardsRun, getBoardRun } from '../../src/commands/boards';
 
-// Response shape: Board[] for list, Board for get (bare resource — no envelope).
+// Response shape: PaginatedResponse<Board> { data, total, page, size, has_more } for list,
+//                 Board for get (bare resource — no envelope).
 
 describe('commands/boards', function () {
   let firstBoardId: string | undefined;
 
   describe('listBoardsRun()', function () {
-    it('returns an array of boards', async function () {
-      const res = await listBoardsRun() as { id: string }[];
-      expect(res).to.be.an('array');
-      if (res.length > 0) firstBoardId = res[0].id;
+    it('returns a paginated list of boards', async function () {
+      const res = await listBoardsRun() as { data: { id: string }[]; total: number; has_more: boolean };
+      expect(res.data).to.be.an('array');
+      expect(res).to.have.property('total');
+      expect(res).to.have.property('has_more');
+      if (res.data.length > 0) firstBoardId = res.data[0].id;
     });
   });
 
