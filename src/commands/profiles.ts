@@ -39,8 +39,8 @@ profiles.command('get', {
 
 export interface SearchProfilesOptions {
   address?: string
-  limit?: number
-  offset?: number
+  page?: number
+  size?: number
   orderBy?: string
   orderDir?: string
   expand?: string
@@ -54,8 +54,8 @@ export function searchProfilesRun(options: SearchProfilesOptions) {
 
   const params: Record<string, string | number> = {}
   if (options.address) params.address = options.address
-  if (options.limit !== undefined) params.limit = options.limit
-  if (options.offset !== undefined) params.offset = options.offset
+  if (options.page !== undefined) params.page = options.page
+  if (options.size !== undefined) params.size = options.size
   if (options.orderBy) params.order_by = options.orderBy
   if (options.orderDir) params.order_dir = options.orderDir
   if (options.expand) params.expand = options.expand
@@ -78,8 +78,8 @@ profiles.command('search', {
   description: 'Search wallet profiles with optional filters',
   options: z.object({
     address: z.string().optional().describe('Filter by wallet address'),
-    limit: z.coerce.number().optional().describe('Max results to return'),
-    offset: z.coerce.number().optional().describe('Pagination offset'),
+    page: z.coerce.number().optional().describe('Page number (1-indexed, default 1)'),
+    size: z.coerce.number().optional().describe('Page size (default 100, max 1000)'),
     orderBy: z
       .enum([
         'last_onchain',
@@ -108,15 +108,19 @@ profiles.command('search', {
       .describe('Logic operator for combining conditions: "and" (default) or "or"'),
   }),
   examples: [
-    { options: { limit: 10 }, description: 'List first 10 profiles' },
+    { options: { size: 10 }, description: 'List first 10 profiles' },
     {
-      options: { orderBy: 'net_worth_usd', orderDir: 'desc', limit: 5 },
+      options: { orderBy: 'net_worth_usd', orderDir: 'desc', size: 5 },
       description: 'Top 5 profiles by net worth',
+    },
+    {
+      options: { page: 2, size: 20 },
+      description: 'Get the second page of 20 profiles',
     },
     {
       options: {
         conditions: '[{"field":"net_worth_usd","op":"gt","value":10000}]',
-        limit: 20,
+        size: 20,
       },
       description: 'Search profiles with net worth > 10000',
     },
@@ -124,7 +128,7 @@ profiles.command('search', {
       options: {
         conditions: '[{"field":"net_worth_usd","op":"gt","value":10000},{"field":"tx_count","op":"gt","value":50}]',
         logic: 'or',
-        limit: 20,
+        size: 20,
       },
       description: 'Search profiles matching either condition',
     },

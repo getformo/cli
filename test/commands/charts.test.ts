@@ -2,34 +2,32 @@ import { expect } from 'chai';
 import { listBoardsRun } from '../../src/commands/boards';
 import { listChartsRun, getChartRun, createChartRun, updateChartRun } from '../../src/commands/charts';
 
-// Response shape: { isSuccess: true, data: { charts: Chart[], board: ... } } for list
-//                 { isSuccess: true, data: Chart }                           for get
+// Response shape: { charts: Chart[], board: Board } for list, Chart for get
+// (bare resource — no envelope).
 
 describe('commands/charts', function () {
   let boardId: string | undefined;
   let firstChartId: string | undefined;
 
   before(async function () {
-    const res = await listBoardsRun() as { isSuccess: boolean; data: { id: string }[] };
-    if (res.data.length > 0) boardId = res.data[0].id;
+    const res = await listBoardsRun() as { id: string }[];
+    if (res.length > 0) boardId = res[0].id;
   });
 
   describe('listChartsRun()', function () {
     it('returns charts for a board', async function () {
       if (!boardId) return this.skip();
-      const res = await listChartsRun(boardId) as { isSuccess: boolean; data: { charts: { id: string }[] } };
-      expect(res.isSuccess).to.equal(true);
-      expect(res.data.charts).to.be.an('array');
-      if (res.data.charts.length > 0) firstChartId = res.data.charts[0].id;
+      const res = await listChartsRun(boardId) as { charts: { id: string }[] };
+      expect(res.charts).to.be.an('array');
+      if (res.charts.length > 0) firstChartId = res.charts[0].id;
     });
   });
 
   describe('getChartRun()', function () {
     it('returns a chart by ID', async function () {
       if (!boardId || !firstChartId) return this.skip();
-      const res = await getChartRun(boardId, firstChartId) as { isSuccess: boolean; data: { id: string } };
-      expect(res.isSuccess).to.equal(true);
-      expect(res.data).to.have.property('id', firstChartId);
+      const res = await getChartRun(boardId, firstChartId) as { id: string };
+      expect(res).to.have.property('id', firstChartId);
     });
   });
 

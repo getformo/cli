@@ -1,14 +1,13 @@
 import { expect } from 'chai';
 import { listSegmentsRun, createSegmentRun } from '../../src/commands/segments';
 
-// Response shape: { isSuccess: true, data: Segment[] }
+// Response shape: Segment[] (bare resource — no envelope).
 
 describe('commands/segments', function () {
   describe('listSegmentsRun()', function () {
     it('returns an array of segments', async function () {
-      const res = await listSegmentsRun() as { isSuccess: boolean; data: unknown[] };
-      expect(res.isSuccess).to.equal(true);
-      expect(res.data).to.be.an('array');
+      const res = await listSegmentsRun() as unknown[];
+      expect(res).to.be.an('array');
     });
   });
 

@@ -1,7 +1,8 @@
 import { expect } from 'chai';
 import { listContractsRun, createContractRun, updateContractRun } from '../../src/commands/contracts';
 
-// Response shape: { isSuccess: true, data: { contracts: Contract[], deployAt, deployDiff } }
+// Response shape: { contracts: Contract[], deployAt?, deployDiff? } for list
+// (bare resource — no envelope).
 
 const TEST_ABI = JSON.stringify([{ type: 'event', name: 'Transfer', inputs: [] }]);
 const TEST_EVENTS = JSON.stringify({ Transfer: true });
@@ -9,9 +10,8 @@ const TEST_EVENTS = JSON.stringify({ Transfer: true });
 describe('commands/contracts', function () {
   describe('listContractsRun()', function () {
     it('returns an array of contracts', async function () {
-      const res = await listContractsRun() as { isSuccess: boolean; data: { contracts: unknown[] } };
-      expect(res.isSuccess).to.equal(true);
-      expect(res.data.contracts).to.be.an('array');
+      const res = await listContractsRun() as { contracts: unknown[] };
+      expect(res.contracts).to.be.an('array');
     });
   });
 

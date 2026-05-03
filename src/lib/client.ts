@@ -20,15 +20,32 @@ function createClient() {
     (res) => res.data,
     (error: AxiosError) => {
       const status = error.response?.status
-      const data = error.response?.data as
-        | { message?: string; error?: string | { message?: string; code?: string } }
+      const body = error.response?.data as
+        | {
+            error?: {
+              code?: string
+              message?: string
+              doc_url?: string
+              param?: string
+              details?: Record<string, unknown>
+            }
+          }
         | undefined
-      const errorField = data?.error
-      const message =
-        data?.message ??
-        (typeof errorField === 'object' ? errorField?.message : errorField) ??
-        error.message
-      throw Object.assign(new Error(message), { status, code: error.code })
+      const apiError = body?.error
+      const baseMessage = apiError?.message ?? error.message
+      const parts: string[] = []
+      parts.push(apiError?.code ? `[${apiError.code}] ${baseMessage}` : baseMessage)
+      if (apiError?.param) parts.push(`Param: ${apiError.param}`)
+      if (apiError?.doc_url) parts.push(`Docs:  ${apiError.doc_url}`)
+      const message = parts.join('\n   ')
+      throw Object.assign(new Error(message), {
+        status,
+        code: apiError?.code,
+        docUrl: apiError?.doc_url,
+        param: apiError?.param,
+        details: apiError?.details,
+        transportCode: error.code,
+      })
     },
   )
 

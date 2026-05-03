@@ -18,15 +18,15 @@ describe('commands/profiles', function () {
   });
 
   describe('searchProfilesRun()', function () {
-    it('returns a list of profiles with a limit', async function () {
-      const result = await searchProfilesRun({ limit: 3 }) as unknown;
-      // API may return array or { data: [...] } — either way it's defined
+    it('returns a paginated list of profiles', async function () {
+      const result = await searchProfilesRun({ size: 3 }) as unknown;
+      // PaginatedResponse<Profile>: { data, total, page, size, has_more }
       expect(result).to.exist;
     });
 
     it('accepts orderBy and orderDir params', async function () {
       const result = await searchProfilesRun({
-        limit: 2,
+        size: 2,
         orderBy: 'net_worth_usd',
         orderDir: 'desc',
       }) as unknown;

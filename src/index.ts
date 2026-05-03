@@ -10,6 +10,8 @@ import { profiles } from './commands/profiles';
 import { query } from './commands/query';
 import { segments } from './commands/segments';
 import { clearConfig, getApiKey, readConfig, saveConfig } from './lib/config';
+import { forwardToFormo } from './lib/forward';
+import openapiSpec from './lib/openapi.json';
 import { banner, color, error, info, success, warn } from './lib/ui';
 
 const DASHBOARD_URL = 'https://app.formo.so';
@@ -37,15 +39,11 @@ function loginGuide(): string {
   ].join('\n');
 }
 
-interface ValidateApiKeyResponse {
-  isSuccess: boolean;
-  message?: string;
-  data?: {
-    validated: boolean;
-    details: string;
-    teamId: string;
-    scopes: { project_id?: string } | null;
-  };
+interface ValidateApiKeyData {
+  validated: boolean;
+  details: string;
+  teamId: string;
+  scopes: { project_id?: string } | null;
 }
 
 async function validateAndFetchWorkspace(
@@ -60,12 +58,12 @@ async function validateAndFetchWorkspace(
 
     if (!res.ok) return null;
 
-    const body = (await res.json()) as ValidateApiKeyResponse;
-    if (!body.isSuccess || !body.data) return null;
+    const body = (await res.json()) as ValidateApiKeyData;
+    if (!body.validated) return null;
 
     return {
-      workspace: body.data.details,
-      projectId: body.data.scopes?.project_id ?? '',
+      workspace: body.details,
+      projectId: body.scopes?.project_id ?? '',
     };
   } catch {
     return null;
@@ -295,6 +293,13 @@ cli.command(charts);
 cli.command(contracts);
 cli.command(segments);
 cli.command(importCmd);
+
+// ── api: OpenAPI-driven raw access (auto-generated subcommands from openapi.json) ──
+
+cli.command('api', {
+  fetch: forwardToFormo,
+  openapi: openapiSpec,
+});
 
 // Show banner when run with no args (root help)
 const args = process.argv.slice(2);
