@@ -3,6 +3,14 @@
   "version": "0.2.0",
   "packageManager": "pnpm@10.28.2",
   "description": "Formo API CLI — query profiles and analytics data",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/getformo/cli.git"
+  },
+  "homepage": "https://github.com/getformo/cli#readme",
+  "bugs": {
+    "url": "https://github.com/getformo/cli/issues"
+  },
   "bin": {
     "formo": "dist/index.js"
   },
