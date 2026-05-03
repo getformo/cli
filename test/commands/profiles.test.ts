@@ -1,10 +1,10 @@
 import { expect } from 'chai';
 import {
-  addProfileLabelRun,
+  createProfileLabelRun,
+  deleteProfileLabelRun,
   getProfileRun,
-  removeProfileLabelRun,
   searchProfilesRun,
-  setProfilePropertiesRun,
+  updateProfileRun,
 } from '../../src/commands/profiles';
 import { requiresLiveApi } from '../helpers/liveApi';
 
@@ -57,48 +57,48 @@ describe('commands/profiles', function () {
     });
   });
 
-  describe('setProfilePropertiesRun() — local validation', function () {
+  describe('updateProfileRun() — local validation', function () {
     it('throws on invalid properties JSON', function () {
       expect(() =>
-        setProfilePropertiesRun(KNOWN_ADDRESS, { properties: 'not-json' }),
+        updateProfileRun(KNOWN_ADDRESS, { properties: 'not-json' }),
       ).to.throw(/properties/);
     });
 
     it('throws when properties is not an object', function () {
       expect(() =>
-        setProfilePropertiesRun(KNOWN_ADDRESS, { properties: '[1,2,3]' }),
+        updateProfileRun(KNOWN_ADDRESS, { properties: '[1,2,3]' }),
       ).to.throw(/properties/);
     });
 
     it('throws when properties is empty', function () {
       expect(() =>
-        setProfilePropertiesRun(KNOWN_ADDRESS, { properties: '{}' }),
+        updateProfileRun(KNOWN_ADDRESS, { properties: '{}' }),
       ).to.throw(/at least one key/);
     });
   });
 
-  describe('addProfileLabelRun() — local validation', function () {
+  describe('createProfileLabelRun() — local validation', function () {
     it('throws when neither --tagId nor --labels is provided', function () {
-      expect(() => addProfileLabelRun(KNOWN_ADDRESS, {})).to.throw(/tagId|labels/);
+      expect(() => createProfileLabelRun(KNOWN_ADDRESS, {})).to.throw(/tagId|labels/);
     });
 
     it('throws on invalid labels JSON', function () {
       expect(() =>
-        addProfileLabelRun(KNOWN_ADDRESS, { labels: 'not-json' }),
+        createProfileLabelRun(KNOWN_ADDRESS, { labels: 'not-json' }),
       ).to.throw(/labels/);
     });
 
     it('throws when labels is not a non-empty array', function () {
       expect(() =>
-        addProfileLabelRun(KNOWN_ADDRESS, { labels: '[]' }),
+        createProfileLabelRun(KNOWN_ADDRESS, { labels: '[]' }),
       ).to.throw(/labels/);
     });
   });
 
-  describe('removeProfileLabelRun() — local validation', function () {
+  describe('deleteProfileLabelRun() — local validation', function () {
     it('throws when --tagId is missing', function () {
       expect(() =>
-        removeProfileLabelRun(KNOWN_ADDRESS, { tagId: '' }),
+        deleteProfileLabelRun(KNOWN_ADDRESS, { tagId: '' }),
       ).to.throw(/tagId/);
     });
   });

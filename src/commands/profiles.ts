@@ -138,15 +138,15 @@ profiles.command('search', {
   },
 })
 
-// ── Set / merge profile properties ──
+// ── Update profile (merge identity properties) ──
 
-export interface SetProfilePropertiesOptions {
+export interface UpdateProfileOptions {
   properties: string
 }
 
-export function setProfilePropertiesRun(
+export function updateProfileRun(
   address: string,
-  options: SetProfilePropertiesOptions,
+  options: UpdateProfileOptions,
 ) {
   requireApiKey()
   const client = createClient()
@@ -169,7 +169,7 @@ export function setProfilePropertiesRun(
   )
 }
 
-profiles.command('set-properties', {
+profiles.command('update', {
   description: 'Merge-update identity properties on a wallet profile',
   args: z.object({
     address: z.string().describe('Wallet address (0x... or ENS name)'),
@@ -197,22 +197,28 @@ profiles.command('set-properties', {
   ],
   hint: 'Requires profiles:write scope on your API key. Only the listed keys are accepted; unknown keys are rejected.',
   run({ args, options }) {
-    return setProfilePropertiesRun(args.address, options)
+    return updateProfileRun(args.address, options)
   },
 })
 
-// ── Add / upsert profile label(s) ──
+// ── Labels sub-resource ──
 
-export interface AddProfileLabelOptions {
+export const profilesLabels = Cli.create('labels', {
+  description: 'Manage labels on a wallet profile',
+})
+
+// ── Create / upsert profile label(s) ──
+
+export interface CreateProfileLabelOptions {
   tagId?: string
   value?: string
   chainId?: string
   labels?: string
 }
 
-export function addProfileLabelRun(
+export function createProfileLabelRun(
   address: string,
-  options: AddProfileLabelOptions,
+  options: CreateProfileLabelOptions,
 ) {
   requireApiKey()
   const client = createClient()
@@ -242,7 +248,7 @@ export function addProfileLabelRun(
   )
 }
 
-profiles.command('add-label', {
+profilesLabels.command('create', {
   description: 'Upsert one or more labels on a wallet profile',
   args: z.object({
     address: z.string().describe('Wallet address (0x... or ENS name)'),
@@ -278,20 +284,20 @@ profiles.command('add-label', {
   ],
   hint: 'Requires profiles:write scope on your API key.',
   run({ args, options }) {
-    return addProfileLabelRun(args.address, options)
+    return createProfileLabelRun(args.address, options)
   },
 })
 
-// ── Remove a profile label ──
+// ── Delete a profile label ──
 
-export interface RemoveProfileLabelOptions {
+export interface DeleteProfileLabelOptions {
   tagId: string
   chainId?: string
 }
 
-export function removeProfileLabelRun(
+export function deleteProfileLabelRun(
   address: string,
-  options: RemoveProfileLabelOptions,
+  options: DeleteProfileLabelOptions,
 ) {
   requireApiKey()
   const client = createClient()
@@ -309,7 +315,7 @@ export function removeProfileLabelRun(
   )
 }
 
-profiles.command('remove-label', {
+profilesLabels.command('delete', {
   description: 'Delete a label from a wallet profile',
   args: z.object({
     address: z.string().describe('Wallet address (0x... or ENS name)'),
@@ -332,6 +338,8 @@ profiles.command('remove-label', {
   ],
   hint: 'Requires profiles:write scope on your API key.',
   run({ args, options }) {
-    return removeProfileLabelRun(args.address, options)
+    return deleteProfileLabelRun(args.address, options)
   },
 })
+
+profiles.command(profilesLabels)
