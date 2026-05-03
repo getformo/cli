@@ -1,6 +1,7 @@
 {
   "name": "@formo/cli",
   "version": "0.2.0",
+  "packageManager": "pnpm@10.28.2",
   "description": "Formo API CLI — query profiles and analytics data",
   "bin": {
     "formo": "dist/index.js"
