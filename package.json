@@ -1,6 +1,6 @@
 {
   "name": "@formo/cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Formo API CLI — query profiles and analytics data",
   "bin": {
     "formo": "dist/index.js"
