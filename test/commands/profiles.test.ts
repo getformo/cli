@@ -1,5 +1,11 @@
 import { expect } from 'chai';
-import { getProfileRun, searchProfilesRun } from '../../src/commands/profiles';
+import {
+  addProfileLabelRun,
+  getProfileRun,
+  removeProfileLabelRun,
+  searchProfilesRun,
+  setProfilePropertiesRun,
+} from '../../src/commands/profiles';
 import { requiresLiveApi } from '../helpers/liveApi';
 
 // Vitalik's address — publicly known, should always return a profile
@@ -48,6 +54,52 @@ describe('commands/profiles', function () {
       expect(() =>
         searchProfilesRun({ conditions: '{"field":"x"}' }),
       ).to.throw(/conditions/);
+    });
+  });
+
+  describe('setProfilePropertiesRun() — local validation', function () {
+    it('throws on invalid properties JSON', function () {
+      expect(() =>
+        setProfilePropertiesRun(KNOWN_ADDRESS, { properties: 'not-json' }),
+      ).to.throw(/properties/);
+    });
+
+    it('throws when properties is not an object', function () {
+      expect(() =>
+        setProfilePropertiesRun(KNOWN_ADDRESS, { properties: '[1,2,3]' }),
+      ).to.throw(/properties/);
+    });
+
+    it('throws when properties is empty', function () {
+      expect(() =>
+        setProfilePropertiesRun(KNOWN_ADDRESS, { properties: '{}' }),
+      ).to.throw(/at least one key/);
+    });
+  });
+
+  describe('addProfileLabelRun() — local validation', function () {
+    it('throws when neither --tagId nor --labels is provided', function () {
+      expect(() => addProfileLabelRun(KNOWN_ADDRESS, {})).to.throw(/tagId|labels/);
+    });
+
+    it('throws on invalid labels JSON', function () {
+      expect(() =>
+        addProfileLabelRun(KNOWN_ADDRESS, { labels: 'not-json' }),
+      ).to.throw(/labels/);
+    });
+
+    it('throws when labels is not a non-empty array', function () {
+      expect(() =>
+        addProfileLabelRun(KNOWN_ADDRESS, { labels: '[]' }),
+      ).to.throw(/labels/);
+    });
+  });
+
+  describe('removeProfileLabelRun() — local validation', function () {
+    it('throws when --tagId is missing', function () {
+      expect(() =>
+        removeProfileLabelRun(KNOWN_ADDRESS, { tagId: '' }),
+      ).to.throw(/tagId/);
     });
   });
 });

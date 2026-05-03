@@ -137,3 +137,201 @@ profiles.command('search', {
     return searchProfilesRun(options)
   },
 })
+
+// ── Set / merge profile properties ──
+
+export interface SetProfilePropertiesOptions {
+  properties: string
+}
+
+export function setProfilePropertiesRun(
+  address: string,
+  options: SetProfilePropertiesOptions,
+) {
+  requireApiKey()
+  const client = createClient()
+
+  let body: Record<string, unknown>
+  try {
+    body = JSON.parse(options.properties)
+    if (!body || typeof body !== 'object' || Array.isArray(body))
+      throw new Error('not an object')
+  } catch {
+    throw new Error('--properties must be a JSON object of property keys')
+  }
+  if (Object.keys(body).length === 0) {
+    throw new Error('--properties must contain at least one key')
+  }
+
+  return client.put(
+    `/v0/profiles/${encodeURIComponent(address)}/properties`,
+    body,
+  )
+}
+
+profiles.command('set-properties', {
+  description: 'Merge-update identity properties on a wallet profile',
+  args: z.object({
+    address: z.string().describe('Wallet address (0x... or ENS name)'),
+  }),
+  options: z.object({
+    properties: z
+      .string()
+      .describe(
+        'JSON object of properties to merge. Allowed keys: user_id, display_name, email, farcaster, discord, twitter, telegram, instagram, website, github, linkedin, facebook, tiktok, youtube, reddit, avatar, description, location, ens, lens, basenames, linea',
+      ),
+  }),
+  examples: [
+    {
+      args: { address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045' },
+      options: {
+        properties: '{"display_name":"Vitalik","twitter":"VitalikButerin"}',
+      },
+      description: 'Set display name and Twitter handle',
+    },
+    {
+      args: { address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045' },
+      options: { properties: '{"email":"alice@example.com"}' },
+      description: 'Set just the email',
+    },
+  ],
+  hint: 'Requires profiles:write scope on your API key. Only the listed keys are accepted; unknown keys are rejected.',
+  run({ args, options }) {
+    return setProfilePropertiesRun(args.address, options)
+  },
+})
+
+// ── Add / upsert profile label(s) ──
+
+export interface AddProfileLabelOptions {
+  tagId?: string
+  value?: string
+  chainId?: string
+  labels?: string
+}
+
+export function addProfileLabelRun(
+  address: string,
+  options: AddProfileLabelOptions,
+) {
+  requireApiKey()
+  const client = createClient()
+
+  let body: unknown
+  if (options.labels) {
+    try {
+      const parsed = JSON.parse(options.labels)
+      if (!Array.isArray(parsed) || parsed.length === 0)
+        throw new Error('not a non-empty array')
+      body = parsed
+    } catch {
+      throw new Error('--labels must be a non-empty JSON array of UserLabelInput objects')
+    }
+  } else if (options.tagId) {
+    const single: Record<string, string> = { tag_id: options.tagId }
+    if (options.value) single.value = options.value
+    if (options.chainId) single.chain_id = options.chainId
+    body = single
+  } else {
+    throw new Error('Provide --tagId (single label) or --labels (batch JSON array)')
+  }
+
+  return client.post(
+    `/v0/profiles/${encodeURIComponent(address)}/labels`,
+    body,
+  )
+}
+
+profiles.command('add-label', {
+  description: 'Upsert one or more labels on a wallet profile',
+  args: z.object({
+    address: z.string().describe('Wallet address (0x... or ENS name)'),
+  }),
+  options: z.object({
+    tagId: z
+      .string()
+      .optional()
+      .describe('Label identifier (e.g. "vip", "airdrop_eligible")'),
+    value: z.string().optional().describe('Optional label value (e.g. tier name, country code)'),
+    chainId: z.string().optional().describe('Optional chain identifier the label applies to'),
+    labels: z
+      .string()
+      .optional()
+      .describe('JSON array of UserLabelInput objects for batch upsert'),
+  }),
+  examples: [
+    {
+      args: { address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045' },
+      options: { tagId: 'vip' },
+      description: 'Tag a wallet as VIP',
+    },
+    {
+      args: { address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045' },
+      options: { tagId: 'tier', value: 'gold', chainId: '1' },
+      description: 'Apply a tiered label scoped to a chain',
+    },
+    {
+      args: { address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045' },
+      options: { labels: '[{"tag_id":"vip"},{"tag_id":"airdrop_eligible","chain_id":"1"}]' },
+      description: 'Apply multiple labels in one call',
+    },
+  ],
+  hint: 'Requires profiles:write scope on your API key.',
+  run({ args, options }) {
+    return addProfileLabelRun(args.address, options)
+  },
+})
+
+// ── Remove a profile label ──
+
+export interface RemoveProfileLabelOptions {
+  tagId: string
+  chainId?: string
+}
+
+export function removeProfileLabelRun(
+  address: string,
+  options: RemoveProfileLabelOptions,
+) {
+  requireApiKey()
+  const client = createClient()
+
+  if (!options.tagId) {
+    throw new Error('--tagId is required')
+  }
+
+  const body: Record<string, string> = { tag_id: options.tagId }
+  if (options.chainId) body.chain_id = options.chainId
+
+  return client.delete(
+    `/v0/profiles/${encodeURIComponent(address)}/labels`,
+    { data: body },
+  )
+}
+
+profiles.command('remove-label', {
+  description: 'Delete a label from a wallet profile',
+  args: z.object({
+    address: z.string().describe('Wallet address (0x... or ENS name)'),
+  }),
+  options: z.object({
+    tagId: z.string().describe('Label identifier to delete'),
+    chainId: z.string().optional().describe('Optional chain identifier to scope the deletion'),
+  }),
+  examples: [
+    {
+      args: { address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045' },
+      options: { tagId: 'vip' },
+      description: 'Remove the vip label',
+    },
+    {
+      args: { address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045' },
+      options: { tagId: 'tier', chainId: '1' },
+      description: 'Remove a chain-scoped label',
+    },
+  ],
+  hint: 'Requires profiles:write scope on your API key.',
+  run({ args, options }) {
+    return removeProfileLabelRun(args.address, options)
+  },
+})
