@@ -1,5 +1,6 @@
 import { expect } from 'chai';
 import { getProfileRun, searchProfilesRun } from '../../src/commands/profiles';
+import { requiresLiveApi } from '../helpers/liveApi';
 
 // Vitalik's address — publicly known, should always return a profile
 const KNOWN_ADDRESS = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045';
@@ -7,11 +8,13 @@ const KNOWN_ADDRESS = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045';
 describe('commands/profiles', function () {
   describe('getProfileRun()', function () {
     it('returns a profile object for a known address', async function () {
+      await requiresLiveApi(this);
       const result = await getProfileRun(KNOWN_ADDRESS) as Record<string, unknown>;
       expect(result).to.be.an('object');
     });
 
     it('encodes address and accepts an expand param', async function () {
+      await requiresLiveApi(this);
       const result = await getProfileRun(KNOWN_ADDRESS, 'chains') as Record<string, unknown>;
       expect(result).to.be.an('object');
     });
@@ -19,12 +22,14 @@ describe('commands/profiles', function () {
 
   describe('searchProfilesRun()', function () {
     it('returns a paginated list of profiles', async function () {
+      await requiresLiveApi(this);
       const result = await searchProfilesRun({ size: 3 }) as unknown;
       // PaginatedResponse<Profile>: { data, total, page, size, has_more }
       expect(result).to.exist;
     });
 
     it('accepts orderBy and orderDir params', async function () {
+      await requiresLiveApi(this);
       const result = await searchProfilesRun({
         size: 2,
         orderBy: 'net_worth_usd',

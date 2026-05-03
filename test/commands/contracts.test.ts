@@ -1,5 +1,6 @@
 import { expect } from 'chai';
 import { listContractsRun, createContractRun, updateContractRun } from '../../src/commands/contracts';
+import { requiresLiveApi } from '../helpers/liveApi';
 
 // Response shape: PaginatedResponse<Contract> + { deploy: { last_deployed_at, diff } } for list
 // (bare resource — no envelope).
@@ -10,6 +11,7 @@ const TEST_EVENTS = JSON.stringify({ Transfer: true });
 describe('commands/contracts', function () {
   describe('listContractsRun()', function () {
     it('returns paginated contracts with deploy status', async function () {
+      await requiresLiveApi(this);
       const res = await listContractsRun() as {
         data: unknown[];
         deploy: { last_deployed_at: string | null; diff: unknown[] };

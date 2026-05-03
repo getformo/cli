@@ -1,5 +1,6 @@
 import { expect } from 'chai';
 import { listBoardsRun, getBoardRun } from '../../src/commands/boards';
+import { requiresLiveApi } from '../helpers/liveApi';
 
 // Response shape: PaginatedResponse<Board> { data, total, page, size, has_more } for list,
 //                 Board for get (bare resource — no envelope).
@@ -9,6 +10,7 @@ describe('commands/boards', function () {
 
   describe('listBoardsRun()', function () {
     it('returns a paginated list of boards', async function () {
+      await requiresLiveApi(this);
       const res = await listBoardsRun() as { data: { id: string }[]; total: number; has_more: boolean };
       expect(res.data).to.be.an('array');
       expect(res).to.have.property('total');

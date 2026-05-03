@@ -1,5 +1,6 @@
 import { expect } from 'chai';
 import { listAlertsRun, getAlertRun, createAlertRun } from '../../src/commands/alerts';
+import { requiresLiveApi } from '../helpers/liveApi';
 
 // Response shape: PaginatedResponse<Alert> { data, total, page, size, has_more } for list,
 //                 Alert for get (bare resource — no envelope).
@@ -9,6 +10,7 @@ describe('commands/alerts', function () {
 
   describe('listAlertsRun()', function () {
     it('returns a paginated list of alerts', async function () {
+      await requiresLiveApi(this);
       const res = await listAlertsRun() as { data: { id: string }[]; total: number; has_more: boolean };
       expect(res.data).to.be.an('array');
       expect(res).to.have.property('total');

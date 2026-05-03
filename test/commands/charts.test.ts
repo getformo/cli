@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import { listBoardsRun } from '../../src/commands/boards';
 import { listChartsRun, getChartRun, createChartRun, updateChartRun } from '../../src/commands/charts';
+import { requiresLiveApi } from '../helpers/liveApi';
 
 // Response shape: PaginatedResponse<Chart> + { board, warnings? } for list,
 //                 Chart for get (bare resource — no envelope).
@@ -10,6 +11,7 @@ describe('commands/charts', function () {
   let firstChartId: string | undefined;
 
   before(async function () {
+    await requiresLiveApi(this);
     const res = await listBoardsRun() as { data: { id: string }[] };
     if (res.data.length > 0) boardId = res.data[0].id;
   });
