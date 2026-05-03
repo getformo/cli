@@ -144,13 +144,7 @@ export interface UpdateProfileOptions {
   properties: string
 }
 
-export function updateProfileRun(
-  address: string,
-  options: UpdateProfileOptions,
-) {
-  requireApiKey()
-  const client = createClient()
-
+export function buildUpdateProfileBody(options: UpdateProfileOptions) {
   let body: Record<string, unknown>
   try {
     body = JSON.parse(options.properties)
@@ -162,10 +156,18 @@ export function updateProfileRun(
   if (Object.keys(body).length === 0) {
     throw new Error('--properties must contain at least one key')
   }
+  return body
+}
 
+export function updateProfileRun(
+  address: string,
+  options: UpdateProfileOptions,
+) {
+  requireApiKey()
+  const client = createClient()
   return client.put(
     `/v0/profiles/${encodeURIComponent(address)}/properties`,
-    body,
+    buildUpdateProfileBody(options),
   )
 }
 
@@ -216,35 +218,35 @@ export interface CreateProfileLabelOptions {
   labels?: string
 }
 
+export function buildCreateLabelBody(options: CreateProfileLabelOptions): unknown {
+  if (options.labels) {
+    try {
+      const parsed = JSON.parse(options.labels)
+      if (!Array.isArray(parsed) || parsed.length === 0)
+        throw new Error('not a non-empty array')
+      return parsed
+    } catch {
+      throw new Error('--labels must be a non-empty JSON array of UserLabelInput objects')
+    }
+  }
+  if (options.tagId) {
+    const single: Record<string, string> = { tag_id: options.tagId }
+    if (options.value) single.value = options.value
+    if (options.chainId) single.chain_id = options.chainId
+    return single
+  }
+  throw new Error('Provide --tagId (single label) or --labels (batch JSON array)')
+}
+
 export function createProfileLabelRun(
   address: string,
   options: CreateProfileLabelOptions,
 ) {
   requireApiKey()
   const client = createClient()
-
-  let body: unknown
-  if (options.labels) {
-    try {
-      const parsed = JSON.parse(options.labels)
-      if (!Array.isArray(parsed) || parsed.length === 0)
-        throw new Error('not a non-empty array')
-      body = parsed
-    } catch {
-      throw new Error('--labels must be a non-empty JSON array of UserLabelInput objects')
-    }
-  } else if (options.tagId) {
-    const single: Record<string, string> = { tag_id: options.tagId }
-    if (options.value) single.value = options.value
-    if (options.chainId) single.chain_id = options.chainId
-    body = single
-  } else {
-    throw new Error('Provide --tagId (single label) or --labels (batch JSON array)')
-  }
-
   return client.post(
     `/v0/profiles/${encodeURIComponent(address)}/labels`,
-    body,
+    buildCreateLabelBody(options),
   )
 }
 
@@ -295,23 +297,24 @@ export interface DeleteProfileLabelOptions {
   chainId?: string
 }
 
+export function buildDeleteLabelBody(options: DeleteProfileLabelOptions) {
+  if (!options.tagId) {
+    throw new Error('--tagId is required')
+  }
+  const body: Record<string, string> = { tag_id: options.tagId }
+  if (options.chainId) body.chain_id = options.chainId
+  return body
+}
+
 export function deleteProfileLabelRun(
   address: string,
   options: DeleteProfileLabelOptions,
 ) {
   requireApiKey()
   const client = createClient()
-
-  if (!options.tagId) {
-    throw new Error('--tagId is required')
-  }
-
-  const body: Record<string, string> = { tag_id: options.tagId }
-  if (options.chainId) body.chain_id = options.chainId
-
   return client.delete(
     `/v0/profiles/${encodeURIComponent(address)}/labels`,
-    { data: body },
+    { data: buildDeleteLabelBody(options) },
   )
 }
 

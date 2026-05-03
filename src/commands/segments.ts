@@ -29,10 +29,7 @@ export interface CreateSegmentOptions {
   filterSets: string
 }
 
-export function createSegmentRun(options: CreateSegmentOptions) {
-  requireApiKey()
-  const client = createClient()
-
+export function buildCreateSegmentBody(options: CreateSegmentOptions) {
   let parsedFilterSets: unknown
   try {
     parsedFilterSets = JSON.parse(options.filterSets)
@@ -40,10 +37,16 @@ export function createSegmentRun(options: CreateSegmentOptions) {
     throw new Error('--filterSets must be a valid JSON array')
   }
 
-  return client.post('/v0/segments/', {
+  return {
     title: options.title,
     filterSets: parsedFilterSets,
-  })
+  }
+}
+
+export function createSegmentRun(options: CreateSegmentOptions) {
+  requireApiKey()
+  const client = createClient()
+  return client.post('/v0/segments/', buildCreateSegmentBody(options))
 }
 
 segments.command('create', {

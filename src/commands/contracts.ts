@@ -32,10 +32,7 @@ export interface CreateContractOptions {
   events: string
 }
 
-export function createContractRun(options: CreateContractOptions) {
-  requireApiKey()
-  const client = createClient()
-
+export function buildCreateContractBody(options: CreateContractOptions) {
   let parsedAbi: unknown
   try {
     parsedAbi = JSON.parse(options.abi)
@@ -50,13 +47,19 @@ export function createContractRun(options: CreateContractOptions) {
     throw new Error('--events must be valid JSON')
   }
 
-  return client.post('/v0/contracts/', {
+  return {
     address: options.address,
     chain: options.chain,
     name: options.name,
     abi: parsedAbi,
     events: parsedEvents,
-  })
+  }
+}
+
+export function createContractRun(options: CreateContractOptions) {
+  requireApiKey()
+  const client = createClient()
+  return client.post('/v0/contracts/', buildCreateContractBody(options))
 }
 
 contracts.command('create', {
@@ -94,14 +97,7 @@ export interface UpdateContractOptions {
   events: string
 }
 
-export function updateContractRun(
-  chain: string,
-  address: string,
-  options: UpdateContractOptions,
-) {
-  requireApiKey()
-  const client = createClient()
-
+export function buildUpdateContractBody(options: UpdateContractOptions) {
   let parsedAbi: unknown
   try {
     parsedAbi = JSON.parse(options.abi)
@@ -116,13 +112,23 @@ export function updateContractRun(
     throw new Error('--events must be valid JSON')
   }
 
+  return {
+    name: options.name,
+    abi: parsedAbi,
+    events: parsedEvents,
+  }
+}
+
+export function updateContractRun(
+  chain: string,
+  address: string,
+  options: UpdateContractOptions,
+) {
+  requireApiKey()
+  const client = createClient()
   return client.put(
     `/v0/contracts/${encodeURIComponent(chain)}/${encodeURIComponent(address)}`,
-    {
-      name: options.name,
-      abi: parsedAbi,
-      events: parsedEvents,
-    },
+    buildUpdateContractBody(options),
   )
 }
 
