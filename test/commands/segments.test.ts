@@ -1,14 +1,17 @@
 import { expect } from 'chai';
 import { listSegmentsRun, createSegmentRun } from '../../src/commands/segments';
+import { requiresLiveApi } from '../helpers/liveApi';
 
-// Response shape: { isSuccess: true, data: Segment[] }
+// Response shape: PaginatedResponse<Segment> { data, total, page, size, has_more } (no envelope).
 
 describe('commands/segments', function () {
   describe('listSegmentsRun()', function () {
-    it('returns an array of segments', async function () {
-      const res = await listSegmentsRun() as { isSuccess: boolean; data: unknown[] };
-      expect(res.isSuccess).to.equal(true);
+    it('returns a paginated list of segments', async function () {
+      await requiresLiveApi(this);
+      const res = await listSegmentsRun() as { data: unknown[]; total: number; has_more: boolean };
       expect(res.data).to.be.an('array');
+      expect(res).to.have.property('total');
+      expect(res).to.have.property('has_more');
     });
   });
 

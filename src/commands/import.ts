@@ -12,10 +12,7 @@ export interface ImportWalletsOptions {
   writeKey: string
 }
 
-export function importWalletsRun(options: ImportWalletsOptions) {
-  requireApiKey()
-  const client = createClient()
-
+export function buildImportBody(options: ImportWalletsOptions) {
   let parsedAddresses: unknown
   try {
     parsedAddresses = JSON.parse(options.addresses)
@@ -25,11 +22,16 @@ export function importWalletsRun(options: ImportWalletsOptions) {
   } catch {
     throw new Error('--addresses must be a valid JSON array of wallet address strings')
   }
-
-  return client.post('/v0/import/', {
+  return {
     addresses: parsedAddresses,
     writeKey: options.writeKey,
-  })
+  }
+}
+
+export function importWalletsRun(options: ImportWalletsOptions) {
+  requireApiKey()
+  const client = createClient()
+  return client.post('/v0/import/', buildImportBody(options))
 }
 
 importCmd.command('wallets', {

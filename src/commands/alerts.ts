@@ -54,10 +54,7 @@ export interface CreateAlertOptions {
   secret?: string
 }
 
-export function createAlertRun(options: CreateAlertOptions) {
-  requireApiKey()
-  const client = createClient()
-
+export function buildAlertBody(options: CreateAlertOptions | UpdateAlertOptions) {
   const body: Record<string, unknown> = {
     name: options.name,
     trigger_type: options.triggerType,
@@ -79,11 +76,17 @@ export function createAlertRun(options: CreateAlertOptions) {
     }
   }
 
-  if (options.secret) {
+  if (options.secret !== undefined) {
     body.secret = options.secret
   }
 
-  return client.post('/v0/alerts/', body)
+  return body
+}
+
+export function createAlertRun(options: CreateAlertOptions) {
+  requireApiKey()
+  const client = createClient()
+  return client.post('/v0/alerts/', buildAlertBody(options))
 }
 
 alerts.command('create', {
@@ -126,33 +129,10 @@ export interface UpdateAlertOptions {
 export function updateAlertRun(alertId: string, options: UpdateAlertOptions) {
   requireApiKey()
   const client = createClient()
-
-  const body: Record<string, unknown> = {
-    name: options.name,
-    trigger_type: options.triggerType,
-  }
-
-  if (options.triggerFilters) {
-    try {
-      body.trigger_filters = JSON.parse(options.triggerFilters)
-    } catch {
-      throw new Error('--triggerFilters must be a valid JSON array')
-    }
-  }
-
-  if (options.recipient) {
-    try {
-      body.recipient = JSON.parse(options.recipient)
-    } catch {
-      throw new Error('--recipient must be a valid JSON array')
-    }
-  }
-
-  if (options.secret !== undefined) {
-    body.secret = options.secret
-  }
-
-  return client.put(`/v0/alerts/${encodeURIComponent(alertId)}`, body)
+  return client.put(
+    `/v0/alerts/${encodeURIComponent(alertId)}`,
+    buildAlertBody(options),
+  )
 }
 
 alerts.command('update', {

@@ -37,15 +37,11 @@ function loginGuide(): string {
   ].join('\n');
 }
 
-interface ValidateApiKeyResponse {
-  isSuccess: boolean;
-  message?: string;
-  data?: {
-    validated: boolean;
-    details: string;
-    teamId: string;
-    scopes: { project_id?: string } | null;
-  };
+interface ValidateApiKeyData {
+  validated: boolean;
+  details: string;
+  teamId: string;
+  scopes: { project_id?: string } | null;
 }
 
 async function validateAndFetchWorkspace(
@@ -60,12 +56,12 @@ async function validateAndFetchWorkspace(
 
     if (!res.ok) return null;
 
-    const body = (await res.json()) as ValidateApiKeyResponse;
-    if (!body.isSuccess || !body.data) return null;
+    const body = (await res.json()) as ValidateApiKeyData;
+    if (!body.validated) return null;
 
     return {
-      workspace: body.data.details,
-      projectId: body.data.scopes?.project_id ?? '',
+      workspace: body.details,
+      projectId: body.scopes?.project_id ?? '',
     };
   } catch {
     return null;
