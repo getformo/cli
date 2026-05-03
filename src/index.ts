@@ -10,8 +10,6 @@ import { profiles } from './commands/profiles';
 import { query } from './commands/query';
 import { segments } from './commands/segments';
 import { clearConfig, getApiKey, readConfig, saveConfig } from './lib/config';
-import { forwardToFormo } from './lib/forward';
-import openapiSpec from './lib/openapi.json';
 import { banner, color, error, info, success, warn } from './lib/ui';
 
 const DASHBOARD_URL = 'https://app.formo.so';
@@ -293,13 +291,6 @@ cli.command(charts);
 cli.command(contracts);
 cli.command(segments);
 cli.command(importCmd);
-
-// ── api: OpenAPI-driven raw access (auto-generated subcommands from openapi.json) ──
-
-cli.command('api', {
-  fetch: forwardToFormo,
-  openapi: openapiSpec,
-});
 
 // Show banner when run with no args (root help)
 const args = process.argv.slice(2);
