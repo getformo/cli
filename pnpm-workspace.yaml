@@ -1,0 +1,8 @@
+minimumReleaseAge: 2880
+blockExoticSubdeps: true
+
+overrides:
+  serialize-javascript: '>=7.0.5'
+
+allowBuilds:
+  esbuild: true
