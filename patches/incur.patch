@@ -1,7 +1,16 @@
 diff --git a/dist/Cli.js b/dist/Cli.js
-index 1467ccf7a6eb6c2bf1e7a5172631032ea3c342e7..1286e927e8b3449fec56601fef633eef68391b4e 100644
+index 1467ccf7a6eb6c2bf1e7a5172631032ea3c342e7..fc5913148ee2ae0423d90d30b276390129a222c6 100644
 --- a/dist/Cli.js
 +++ b/dist/Cli.js
+@@ -1951,7 +1951,7 @@ function formatCta(name, cta) {
+             cmd += value === true ? ` <${key}>` : ` ${value}`;
+     if (cta.options)
+         for (const [key, value] of Object.entries(cta.options))
+-            cmd += value === true ? ` --${key} <${key}>` : ` --${key} ${value}`;
++            cmd += value === true ? ` --${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)} <${key}>` : ` --${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)} ${value}`;
+     return { command: cmd, ...(cta.description ? { description: cta.description } : undefined) };
+ }
+ /** @internal Builds the `--llms` index manifest (name + description only) from the command tree. */
 @@ -2113,7 +2113,7 @@ export function formatExamples(examples) {
                  parts.push(String(value));
          if (ex.options)
@@ -11,3 +20,29 @@ index 1467ccf7a6eb6c2bf1e7a5172631032ea3c342e7..1286e927e8b3449fec56601fef633eef
          const result = { command: parts.join(' ') };
          if (ex.description)
              result.description = ex.description;
+diff --git a/dist/Help.js b/dist/Help.js
+index a0545f3eda9b12d8e33a46c02941926e72dab995..ea3caac698c27daa05d219addb202c66428337cd 100644
+--- a/dist/Help.js
++++ b/dist/Help.js
+@@ -52,7 +52,7 @@ export function formatCommand(name, options = {}) {
+                     parts.push(`<${key}>`);
+             if (u.options)
+                 for (const key of Object.keys(u.options))
+-                    parts.push(`--${key} <${key}>`);
++                    parts.push(`--${toKebab(key)} <${key}>`);
+             if (u.suffix)
+                 parts.push(u.suffix);
+             return parts.join(' ');
+diff --git a/dist/Skill.js b/dist/Skill.js
+index d5b5bfb74d2b6f20c4a089e2315fe7f52181a3bd..1295e5a46e5b1f323e855d5c062feb4b95aca765 100644
+--- a/dist/Skill.js
++++ b/dist/Skill.js
+@@ -143,7 +143,7 @@ function renderCommandBody(cli, cmd, level = 1) {
+             const def = prop?.default !== undefined ? String(prop.default) : '';
+             const rawDesc = field.description ?? '';
+             const desc = prop?.deprecated ? `**Deprecated.** ${rawDesc}` : rawDesc;
+-            return `| \`--${key}\` | \`${type}\` | ${def ? `\`${def}\`` : ''} | ${desc} |`;
++            return `| \`--${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}\` | \`${type}\` | ${def ? `\`${def}\`` : ''} | ${desc} |`;
+         });
+         sections.push(`${sub} Options\n\n| Flag | Type | Default | Description |\n|------|------|---------|-------------|\n${rows.join('\n')}`);
+     }
