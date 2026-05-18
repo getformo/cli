@@ -9,6 +9,7 @@ import {
   buildCreateLabelBody,
   buildDeleteLabelBody,
   buildUpdateProfileBody,
+  parseSearchConditions,
 } from '../../src/commands/profiles';
 import { buildCreateSegmentBody } from '../../src/commands/segments';
 
@@ -145,7 +146,7 @@ describe('commands / body builders', function () {
   // ── Profiles labels create ──
 
   describe('buildCreateLabelBody()', function () {
-    it('produces a single-label object body when --tagId is given', function () {
+    it('produces a single-label object body when --tag-id is given', function () {
       const body = buildCreateLabelBody({ tagId: 'vip' });
       expect(body).to.deep.equal({ tag_id: 'vip' });
     });
@@ -173,7 +174,7 @@ describe('commands / body builders', function () {
       ]);
     });
 
-    it('--labels takes precedence over --tagId when both are provided', function () {
+    it('--labels takes precedence over --tag-id when both are provided', function () {
       const body = buildCreateLabelBody({
         tagId: 'should-be-ignored',
         labels: '[{"tag_id":"vip"}]',
@@ -193,6 +194,56 @@ describe('commands / body builders', function () {
     it('includes chain_id when provided', function () {
       const body = buildDeleteLabelBody({ tagId: 'tier', chainId: '1' });
       expect(body).to.deep.equal({ tag_id: 'tier', chain_id: '1' });
+    });
+  });
+
+  // ── Profiles search conditions ──
+
+  describe('parseSearchConditions()', function () {
+    it('accepts conditions with typed field prefixes', function () {
+      const conds = parseSearchConditions(
+        '[{"field":"users.net_worth_usd","op":"gt","value":10000},{"field":"chains.1.balance","op":"gte","value":1000}]',
+      );
+      expect(conds).to.have.length(2);
+      expect((conds[0] as { field: string }).field).to.equal('users.net_worth_usd');
+    });
+
+    it('accepts apps., tokens., and labels. prefixes', function () {
+      expect(() =>
+        parseSearchConditions(
+          '[{"field":"apps.uniswap-v3.balance","op":"gt","value":0},{"field":"tokens.0xabc.balance","op":"gt","value":1},{"field":"labels.coinbase.verified_account","op":"eq","value":"true"}]',
+        ),
+      ).to.not.throw();
+    });
+
+    it('rejects a bare (untyped) field — the silent-failure footgun', function () {
+      expect(() =>
+        parseSearchConditions('[{"field":"net_worth_usd","op":"gt","value":10000}]'),
+      ).to.throw(/must be a typed path/);
+    });
+
+    it('rejects a known field name without its prefix', function () {
+      expect(() =>
+        parseSearchConditions('[{"field":"tx_count","op":"gt","value":5}]'),
+      ).to.throw(/must be a typed path/);
+    });
+
+    it('throws on invalid JSON', function () {
+      expect(() => parseSearchConditions('not-json')).to.throw(
+        /valid JSON array of FilterCondition/,
+      );
+    });
+
+    it('throws when not an array', function () {
+      expect(() => parseSearchConditions('{"field":"users.net_worth_usd"}')).to.throw(
+        /valid JSON array of FilterCondition/,
+      );
+    });
+
+    it('throws when an entry is missing a string field', function () {
+      expect(() => parseSearchConditions('[{"op":"gt","value":1}]')).to.throw(
+        /must have a non-empty string "field"/,
+      );
     });
   });
 });

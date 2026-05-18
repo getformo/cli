@@ -65,42 +65,57 @@ formo profiles search [options]
 | Option | Values | Description |
 |---|---|---|
 | `--address` | `string` | Filter to a specific wallet address |
-| `--limit` | `number` | Max results (default: API default) |
-| `--offset` | `number` | Pagination offset |
-| `--orderBy` | see below | Field to sort by |
-| `--orderDir` | `asc`, `desc` | Sort direction |
+| `--page` | `number` | Page number (1-indexed, default `1`) |
+| `--size` | `number` | Page size (default `100`, max `1000`) |
+| `--order-by` | see below | Field to sort by |
+| `--order-dir` | `asc`, `desc` | Sort direction |
 | `--expand` | `string` | Comma-separated fields to expand |
 | `--conditions` | JSON array | Advanced filter conditions (see below) |
 
-**`--orderBy` values:** `last_onchain`, `first_onchain`, `net_worth_usd`, `updated_at`, `tx_count`, `first_seen`, `last_seen`, `num_sessions`, `revenue`, `volume`, `points`
+**`--order-by` values:** `last_onchain`, `first_onchain`, `net_worth_usd`, `updated_at`, `tx_count`, `first_seen`, `last_seen`, `num_sessions`, `revenue`, `volume`, `points`
 
 **Examples:**
 ```bash
 # First 10 profiles
-formo profiles search --limit 10
+formo profiles search --size 10
 
 # Top 5 by net worth (descending)
-formo profiles search --orderBy net_worth_usd --orderDir desc --limit 5
+formo profiles search --order-by net_worth_usd --order-dir desc --size 5
 
 # Profiles with net worth over $10k
-formo profiles search --conditions '[{"field":"net_worth_usd","op":"gt","value":10000}]' --limit 20
+formo profiles search --conditions '[{"field":"users.net_worth_usd","op":"gt","value":10000}]' --size 20
 
-# High-activity wallets
-formo profiles search --orderBy tx_count --orderDir desc --limit 10 --expand labels
+# Profiles with > $1k balance on Ethereum (chain 1)
+formo profiles search --conditions '[{"field":"chains.1.balance","op":"gt","value":1000}]' --size 20
+
+# Second page of 20, sorted by tx count
+formo profiles search --order-by tx_count --order-dir desc --page 2 --size 20 --expand labels
 ```
 
 **FilterCondition schema:**
 ```json
-{ "field": "net_worth_usd", "op": "gt", "value": 10000 }
+{ "field": "users.net_worth_usd", "op": "gt", "value": 10000 }
 ```
 
 | Property | Type | Description |
 |---|---|---|
-| `field` | `string` | Profile field to filter on |
+| `field` | `string` | **Typed path** — a bare name like `net_worth_usd` is silently ignored by the API |
 | `op` | `string` | `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `nin` |
 | `value` | `any` | Value to compare against |
+| `scope` | `string` | _(token filters only)_ `any` or `protocol` |
+| `appId` | `string` | _(token filters with `scope: protocol`)_ e.g. `aave-v3` |
 
-Multiple conditions are combined with `AND` logic.
+**Field path prefixes:**
+
+| Prefix | Examples |
+|---|---|
+| `users.` | `users.net_worth_usd`, `users.volume`, `users.revenue`, `users.points`, `users.device`, `users.location`, `users.lifecycle`, `users.ens`, `users.farcaster` |
+| `chains.` | `chains.balance` (any chain), `chains.1.balance` (Ethereum) |
+| `apps.` | `apps.uniswap-v3.balance` |
+| `tokens.` | `tokens.0xA0b8…48.balance` |
+| `labels.` | `labels.coinbase.verified_account` |
+
+Combine multiple conditions with `--logic and` (default) or `--logic or`.
 
 ---
 
@@ -127,6 +142,47 @@ formo query "SELECT address, net_worth_usd FROM wallet_profiles ORDER BY net_wor
 # Recent sessions
 formo query "SELECT address, last_seen FROM wallet_profiles ORDER BY last_seen DESC LIMIT 5"
 ```
+
+---
+
+## Pre-built Analytics
+
+Pre-computed analytics pipes — the same data that powers the Formo dashboard — without writing SQL.
+
+```bash
+formo analytics <pipe> [options]
+```
+
+> Requires `query:read` scope on your API key.
+
+**Pipes:** `kpis`, `event_timeseries`, `funnel`, `flow`, `frequency`, `lifecycle`, `retention`, `revenue_overview`, `revenue_by_metric`, `revenue_timeseries`, `volume_by_metric`, `top_chains`, `top_events`, `top_locations`, `top_pages`, `top_sources`, `top_wallets`
+
+| Option | Description |
+|---|---|
+| `--date-from` | Inclusive start date `YYYY-MM-DD` (default: 7 days before `--date-to`) |
+| `--date-to` | Inclusive end date `YYYY-MM-DD` (default: today) |
+| `--filters` | JSON array of `[{field,op,value}]`. Use `in`/`notIn` with a pipe-delimited value (e.g. `"chrome\|firefox"`) |
+| `--params` | JSON object of pipe-specific params merged into the query (e.g. `{"limit":10,"group_by":"device"}`) |
+
+**Examples:**
+```bash
+# Traffic KPIs for the last 7 days (default range)
+formo analytics kpis
+
+# KPIs for April 2026, broken down by device
+formo analytics kpis --date-from 2026-04-01 --date-to 2026-04-30 --params '{"group_by":"device"}'
+
+# Conversion funnel across ordered steps (each step: {type,event,name,filters?})
+formo analytics funnel --date-from 2026-04-01 --date-to 2026-04-30 --params '{"steps":[{"type":"event","event":"page","name":"page::0","filters":[]},{"type":"track","event":"connect","name":"connect::1","filters":[]}],"window_seconds":86400}'
+
+# Top 10 wallets by activity last month
+formo analytics top_wallets --date-from 2026-04-01 --date-to 2026-04-30 --params '{"limit":10}'
+
+# Retention filtered to US visitors
+formo analytics retention --filters '[{"field":"location","op":"equals","value":"US"}]'
+```
+
+Each pipe accepts pipe-specific params via `--params` (see each command's `--help`): e.g. `funnel` → `steps`, `window_seconds`, `funnel_type`, `breakdown`; `kpis` → `group_by`, `limit`; `top_*` → `limit`, `offset`.
 
 ---
 
@@ -157,14 +213,14 @@ formo alerts get <alertId>
 ### Create an alert
 
 ```bash
-formo alerts create --name <name> --triggerType <type> [options]
+formo alerts create --name <name> --trigger-type <type> [options]
 ```
 
 | Option | Description |
 |---|---|
 | `--name` | Alert name |
-| `--triggerType` | Trigger type (e.g. `event`, `threshold`) |
-| `--triggerFilters` | JSON array of trigger filter objects (optional) |
+| `--trigger-type` | Trigger type (e.g. `event`, `threshold`) |
+| `--trigger-filters` | JSON array of trigger filter objects (optional) |
 | `--recipient` | JSON array of recipient objects (optional) |
 | `--secret` | Webhook secret string (optional) |
 
@@ -173,18 +229,18 @@ formo alerts create --name <name> --triggerType <type> [options]
 **Examples:**
 ```bash
 # Create a basic event alert
-formo alerts create --name "High value tx" --triggerType event
+formo alerts create --name "High value tx" --trigger-type event
 
 # Create an alert with filters and recipients
-formo alerts create --name "Whale alert" --triggerType threshold \
-  --triggerFilters '[{"field":"amount","op":"gt","value":100000}]' \
+formo alerts create --name "Whale alert" --trigger-type threshold \
+  --trigger-filters '[{"field":"amount","op":"gt","value":100000}]' \
   --recipient '["https://hooks.example.com/formo"]'
 ```
 
 ### Update an alert
 
 ```bash
-formo alerts update <alertId> --name <name> --triggerType <type> [options]
+formo alerts update <alertId> --name <name> --trigger-type <type> [options]
 ```
 
 > Requires `alerts:write` scope.
@@ -284,7 +340,7 @@ Manage charts within dashboard boards. Charts are visualizations of analytics da
 ### List charts in a board
 
 ```bash
-formo charts list --boardId <boardId>
+formo charts list --board-id <boardId>
 ```
 
 > Requires `boards:read` scope.
@@ -292,7 +348,7 @@ formo charts list --boardId <boardId>
 ### Get a single chart
 
 ```bash
-formo charts get <chartId> --boardId <boardId>
+formo charts get <chartId> --board-id <boardId>
 ```
 
 > Requires `boards:read` scope.
@@ -300,26 +356,26 @@ formo charts get <chartId> --boardId <boardId>
 ### Create a chart
 
 ```bash
-formo charts create --boardId <boardId> --body '<json>'
+formo charts create --board-id <boardId> --body '<json>'
 ```
 
 | Option | Description |
 |---|---|
-| `--boardId` | Board ID to add the chart to |
+| `--board-id` | Board ID to add the chart to |
 | `--body` | Full chart configuration as a JSON string |
 
 > Requires `boards:write` scope.
 
 **Examples:**
 ```bash
-formo charts create --boardId board_abc123 \
+formo charts create --board-id board_abc123 \
   --body '{"name":"Daily active users","chartType":"line"}'
 ```
 
 ### Update a chart
 
 ```bash
-formo charts update <chartId> --boardId <boardId> --body '<json>'
+formo charts update <chartId> --board-id <boardId> --body '<json>'
 ```
 
 > Requires `boards:write` scope.
@@ -327,7 +383,7 @@ formo charts update <chartId> --boardId <boardId> --body '<json>'
 ### Delete a chart
 
 ```bash
-formo charts delete <chartId> --boardId <boardId>
+formo charts delete <chartId> --board-id <boardId>
 ```
 
 > Requires `boards:write` scope.
@@ -410,19 +466,19 @@ formo segments list
 ### Create a segment
 
 ```bash
-formo segments create --title <title> --filterSets '<json>'
+formo segments create --title <title> --filter-sets '<json>'
 ```
 
 | Option | Description |
 |---|---|
 | `--title` | Segment title |
-| `--filterSets` | JSON array of filter set strings defining the segment |
+| `--filter-sets` | JSON array of filter set strings defining the segment |
 
 > Requires `segments:write` scope.
 
 **Examples:**
 ```bash
-formo segments create --title "Whales" --filterSets '["net_worth_usd > 100000"]'
+formo segments create --title "Whales" --filter-sets '["net_worth_usd > 100000"]'
 ```
 
 ### Delete a segment
@@ -440,13 +496,13 @@ formo segments delete <segmentId>
 Bulk import wallet addresses into a project to track them. This creates identify events for each address.
 
 ```bash
-formo import wallets --addresses '<json>' --writeKey <writeKey>
+formo import wallets --addresses '<json>' --write-key <writeKey>
 ```
 
 | Option | Description |
 |---|---|
 | `--addresses` | JSON array of wallet address strings to import |
-| `--writeKey` | Project write SDK key |
+| `--write-key` | Project write SDK key |
 
 > Requires `profiles:write` scope. **Only available on Scale and Enterprise plans.**
 
@@ -454,7 +510,7 @@ formo import wallets --addresses '<json>' --writeKey <writeKey>
 ```bash
 formo import wallets \
   --addresses '["0xabc123…","0xdef456…"]' \
-  --writeKey write_key_xxx
+  --write-key write_key_xxx
 ```
 
 ---

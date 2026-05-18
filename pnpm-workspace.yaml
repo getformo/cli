@@ -6,3 +6,6 @@ overrides:
 
 allowBuilds:
   esbuild: true
+
+patchedDependencies:
+  incur: patches/incur.patch

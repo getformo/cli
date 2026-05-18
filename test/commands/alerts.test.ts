@@ -28,8 +28,8 @@ describe('commands/alerts', function () {
   });
 
   describe('createAlertRun() — local validation', function () {
-    it('throws on invalid triggerFilters JSON', function () {
-      expect(() => createAlertRun({ name: 'x', triggerType: 'event', triggerFilters: 'not-json' })).to.throw(/triggerFilters/);
+    it('throws on invalid --trigger-filters JSON', function () {
+      expect(() => createAlertRun({ name: 'x', triggerType: 'event', triggerFilters: 'not-json' })).to.throw(/trigger-filters/);
     });
 
     it('throws on invalid recipient JSON', function () {

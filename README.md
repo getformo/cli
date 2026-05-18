@@ -82,18 +82,19 @@ Search wallet profiles with filters, sorting, and pagination. Returns a `Paginat
 | `--address` | Filter by wallet address |
 | `--page` | Page number (1-indexed, default `1`) |
 | `--size` | Page size (default `100`, max `1000`) |
-| `--orderBy` | `last_onchain`, `first_onchain`, `net_worth_usd`, `updated_at`, `tx_count`, `first_seen`, `last_seen`, `num_sessions`, `revenue`, `volume`, `points` |
-| `--orderDir` | `asc` or `desc` |
+| `--order-by` | `last_onchain`, `first_onchain`, `net_worth_usd`, `updated_at`, `tx_count`, `first_seen`, `last_seen`, `num_sessions`, `revenue`, `volume`, `points` |
+| `--order-dir` | `asc` or `desc` |
 | `--expand` | Comma-separated fields to expand |
 | `--conditions` | JSON array of `FilterCondition` objects (see below) |
 | `--logic` | Combine conditions with `and` (default) or `or` |
 
 ```bash
 formo profiles search --size 10
-formo profiles search --orderBy net_worth_usd --orderDir desc --size 5
+formo profiles search --order-by net_worth_usd --order-dir desc --size 5
 formo profiles search --page 2 --size 20
-formo profiles search --conditions '[{"field":"net_worth_usd","op":"gt","value":10000}]' --size 20
-formo profiles search --conditions '[{"field":"net_worth_usd","op":"gt","value":10000},{"field":"tx_count","op":"gt","value":50}]' --logic or --size 20
+formo profiles search --conditions '[{"field":"users.net_worth_usd","op":"gt","value":10000}]' --size 20
+formo profiles search --conditions '[{"field":"users.net_worth_usd","op":"gt","value":10000},{"field":"users.volume","op":"gt","value":1000}]' --logic or --size 20
+formo profiles search --conditions '[{"field":"chains.1.balance","op":"gt","value":1000}]' --size 20
 ```
 
 ### `profiles update <address>`
@@ -115,18 +116,18 @@ formo profiles update vitalik.eth --properties '{"email":"alice@example.com"}'
 
 ### `profiles labels create <address>`
 
-Upsert one or more labels on a wallet profile. Provide either a single label via `--tagId` or a batch via `--labels`.
+Upsert one or more labels on a wallet profile. Provide either a single label via `--tag-id` or a batch via `--labels`.
 
 | Option | Description |
 |---|---|
-| `--tagId` | Label identifier (e.g. `vip`, `airdrop_eligible`) |
+| `--tag-id` | Label identifier (e.g. `vip`, `airdrop_eligible`) |
 | `--value` | Optional label value (e.g. tier name, country code) |
-| `--chainId` | Optional chain identifier the label applies to |
+| `--chain-id` | Optional chain identifier the label applies to |
 | `--labels` | JSON array of `UserLabelInput` objects for batch upsert |
 
 ```bash
-formo profiles labels create 0xd8dA... --tagId vip
-formo profiles labels create 0xd8dA... --tagId tier --value gold --chainId 1
+formo profiles labels create 0xd8dA... --tag-id vip
+formo profiles labels create 0xd8dA... --tag-id tier --value gold --chain-id 1
 formo profiles labels create 0xd8dA... --labels '[{"tag_id":"vip"},{"tag_id":"airdrop_eligible","chain_id":"1"}]'
 ```
 
@@ -136,12 +137,12 @@ Delete a label from a wallet profile.
 
 | Option | Description |
 |---|---|
-| `--tagId` | Label identifier to delete (required) |
-| `--chainId` | Optional chain identifier to scope the deletion |
+| `--tag-id` | Label identifier to delete (required) |
+| `--chain-id` | Optional chain identifier to scope the deletion |
 
 ```bash
-formo profiles labels delete 0xd8dA... --tagId vip
-formo profiles labels delete 0xd8dA... --tagId tier --chainId 1
+formo profiles labels delete 0xd8dA... --tag-id vip
+formo profiles labels delete 0xd8dA... --tag-id tier --chain-id 1
 ```
 
 > Requires `profiles:write` scope.
@@ -163,14 +164,14 @@ Get a single alert by ID.
 | Option | Description |
 |---|---|
 | `--name` | Alert name |
-| `--triggerType` | Trigger type (e.g. `event`, `threshold`) |
-| `--triggerFilters` | JSON array of trigger filter objects |
+| `--trigger-type` | Trigger type (e.g. `event`, `threshold`) |
+| `--trigger-filters` | JSON array of trigger filter objects |
 | `--recipient` | JSON array of recipient objects |
 | `--secret` | Webhook secret |
 
 ```bash
-formo alerts create --name "High value tx" --triggerType event \
-  --triggerFilters '[{"name":"event","operator":"equals","value":"transaction"}]' \
+formo alerts create --name "High value tx" --trigger-type event \
+  --trigger-filters '[{"name":"event","operator":"equals","value":"transaction"}]' \
   --recipient '[{"type":"email","value":["alerts@myapp.com"]}]'
 ```
 
@@ -226,19 +227,19 @@ Delete a board.
 
 Chart commands. Charts live inside a board. Requires `charts:read` / `charts:write`.
 
-### `charts list --boardId <boardId>`
+### `charts list --board-id <boardId>`
 List all charts in a board.
 
-### `charts get <chartId> --boardId <boardId>`
+### `charts get <chartId> --board-id <boardId>`
 Get a single chart by ID.
 
-### `charts create --boardId <boardId> --body '<json>'`
+### `charts create --board-id <boardId> --body '<json>'`
 Create a chart from a JSON config string.
 
-### `charts update <chartId> --boardId <boardId> --body '<json>'`
+### `charts update <chartId> --board-id <boardId> --body '<json>'`
 Update a chart.
 
-### `charts delete <chartId> --boardId <boardId>`
+### `charts delete <chartId> --board-id <boardId>`
 Delete a chart.
 
 ---
@@ -291,7 +292,7 @@ List all user segments.
 | Option | Description |
 |---|---|
 | `--title` | Segment title |
-| `--filterSets` | JSON array of filter set strings defining the segment |
+| `--filter-sets` | JSON array of filter set strings defining the segment |
 
 ### `segments delete <segmentId>`
 Delete a user segment.
@@ -313,6 +314,31 @@ formo query run "SELECT address, net_worth_usd FROM wallet_profiles ORDER BY net
 
 ---
 
+## `formo analytics`
+
+Pre-built analytics pipes — the same data that powers the Formo dashboard — without writing SQL. Each pipe is a subcommand: `formo analytics <pipe>`.
+
+**Pipes:** `kpis`, `event_timeseries`, `funnel`, `flow`, `frequency`, `lifecycle`, `retention`, `revenue_overview`, `revenue_by_metric`, `revenue_timeseries`, `volume_by_metric`, `top_chains`, `top_events`, `top_locations`, `top_pages`, `top_sources`, `top_wallets`
+
+| Option | Description |
+|---|---|
+| `--date-from` | Inclusive start date `YYYY-MM-DD` (default: 7 days before `--date-to`) |
+| `--date-to` | Inclusive end date `YYYY-MM-DD` (default: today) |
+| `--filters` | JSON array of `[{field,op,value}]`. Use `in`/`notIn` with a pipe-delimited value (e.g. `"chrome\|firefox"`) |
+| `--params` | JSON object of pipe-specific params merged into the query (e.g. `{"limit":10,"group_by":"device"}`) |
+
+```bash
+formo analytics kpis
+formo analytics kpis --date-from 2026-04-01 --date-to 2026-04-30 --params '{"group_by":"device"}'
+formo analytics funnel --date-from 2026-04-01 --date-to 2026-04-30 --params '{"steps":[{"type":"event","event":"page","name":"page::0","filters":[]},{"type":"track","event":"connect","name":"connect::1","filters":[]}],"window_seconds":86400}'
+formo analytics top_wallets --date-from 2026-04-01 --date-to 2026-04-30 --params '{"limit":10}'
+formo analytics retention --filters '[{"field":"location","op":"equals","value":"US"}]'
+```
+
+> Requires `query:read` scope. Run `formo analytics <pipe> --help` for the pipe-specific params accepted via `--params`.
+
+---
+
 ## `formo import`
 
 ### `import wallets`
@@ -322,10 +348,10 @@ Bulk-import wallet addresses into the project via the events API.
 | Option | Description |
 |---|---|
 | `--addresses` | JSON array of wallet address strings |
-| `--writeKey` | Project write SDK key |
+| `--write-key` | Project write SDK key |
 
 ```bash
-formo import wallets --addresses '["0xabc...","0xdef..."]' --writeKey write_key_xyz
+formo import wallets --addresses '["0xabc...","0xdef..."]' --write-key write_key_xyz
 ```
 
 ---
@@ -336,16 +362,30 @@ formo import wallets --addresses '["0xabc...","0xdef..."]' --writeKey write_key_
 
 ```json
 [
-  { "field": "net_worth_usd", "op": "gt", "value": 10000 },
-  { "field": "tx_count", "op": "gte", "value": 5 }
+  { "field": "users.net_worth_usd", "op": "gt", "value": 10000 },
+  { "field": "chains.1.balance", "op": "gte", "value": 1000 }
 ]
 ```
 
+> **The `field` must be a typed path.** A bare name like `net_worth_usd` is
+> silently ignored by the API (no error, no filtering — the search returns
+> everything). Always prefix the field with its type.
+
 | Field | Type | Description |
 |---|---|---|
-| `field` | `string` | Profile field to filter on |
+| `field` | `string` | Typed path (see prefixes below) |
 | `op` | `string` | `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `nin` |
 | `value` | `any` | Value to compare against |
+| `scope` | `string` | _(token filters only)_ `any` or `protocol` |
+| `appId` | `string` | _(token filters with `scope: protocol`)_ e.g. `aave-v3` |
+
+| Prefix | Examples |
+|---|---|
+| `users.` | `users.net_worth_usd`, `users.volume`, `users.revenue`, `users.points`, `users.device`, `users.location`, `users.lifecycle`, `users.ens`, `users.farcaster` |
+| `chains.` | `chains.balance` (any chain), `chains.1.balance` (Ethereum) |
+| `apps.` | `apps.uniswap-v3.balance` |
+| `tokens.` | `tokens.0xA0b8…48.balance` |
+| `labels.` | `labels.coinbase.verified_account` |
 
 Combine multiple conditions with `--logic and` (default) or `--logic or`.
 

@@ -32,6 +32,7 @@ profiles.command('get', {
       description: 'Get profile with expanded labels and chains',
     },
   ],
+  hint: 'Requires profiles:read scope on your API key.',
   run({ args, options }) {
     return getProfileRun(args.address, options.expand)
   },
@@ -48,6 +49,58 @@ export interface SearchProfilesOptions {
   logic?: 'and' | 'or'
 }
 
+// Accepted first segments for a FilterCondition `field`, mirroring the API's
+// parseField(). A field whose prefix is not one of these is silently ignored
+// server-side (no error, no filtering — the search returns everything), so we
+// reject it client-side with an actionable message instead.
+const CONDITION_FIELD_PREFIXES = new Set([
+  'user',
+  'users',
+  'chain',
+  'chains',
+  'app',
+  'apps',
+  'token',
+  'tokens',
+  'label',
+  'labels',
+])
+
+/**
+ * Parse and validate the --conditions JSON. Ensures it is an array of
+ * `{ field, op, value }` objects whose `field` is a typed path (e.g.
+ * `users.net_worth_usd`) — a bare name like `net_worth_usd` is silently
+ * dropped by the API, so it is rejected here. Exported for unit testing.
+ */
+export function parseSearchConditions(raw: string): unknown[] {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    throw new Error('--conditions must be a valid JSON array of FilterCondition objects')
+  }
+  if (!Array.isArray(parsed)) {
+    throw new Error('--conditions must be a valid JSON array of FilterCondition objects')
+  }
+  for (const cond of parsed) {
+    if (!cond || typeof cond !== 'object' || Array.isArray(cond)) {
+      throw new Error('--conditions: each entry must be an object with field, op, value')
+    }
+    const field = (cond as { field?: unknown }).field
+    if (typeof field !== 'string' || field.length === 0) {
+      throw new Error('--conditions: each entry must have a non-empty string "field"')
+    }
+    if (!field.includes('.') || !CONDITION_FIELD_PREFIXES.has(field.split('.')[0])) {
+      throw new Error(
+        `--conditions: field "${field}" must be a typed path — prefix it with ` +
+          'users., chains., apps., tokens., or labels. ' +
+          '(a bare name is silently ignored by the API and returns the entire unfiltered dataset)',
+      )
+    }
+  }
+  return parsed
+}
+
 export function searchProfilesRun(options: SearchProfilesOptions) {
   requireApiKey()
   const client = createClient()
@@ -62,12 +115,9 @@ export function searchProfilesRun(options: SearchProfilesOptions) {
 
   let body: object | undefined
   if (options.conditions) {
-    try {
-      const conditions = JSON.parse(options.conditions)
-      if (!Array.isArray(conditions)) throw new Error('not an array')
-      body = { conditions, logic: options.logic ?? 'and' }
-    } catch {
-      throw new Error('--conditions must be valid JSON array of FilterCondition objects')
+    body = {
+      conditions: parseSearchConditions(options.conditions),
+      logic: options.logic ?? 'and',
     }
   }
 
@@ -101,7 +151,17 @@ profiles.command('search', {
     conditions: z
       .string()
       .optional()
-      .describe('JSON array of FilterCondition objects for advanced filtering'),
+      .describe(
+        'JSON array of FilterCondition objects: [{"field","op","value"}]. ' +
+          'The "field" MUST be a typed path — a bare name like "net_worth_usd" is silently ignored. ' +
+          'Profile: users.net_worth_usd, users.volume, users.revenue, users.points. ' +
+          'Engagement: users.device, users.browser, users.os, users.location, users.lifecycle. ' +
+          'Socials: users.ens, users.farcaster, users.lens, etc. ' +
+          'Chains: chains.balance or chains.{chain_id}.balance. ' +
+          'Apps: apps.{app_id}.balance. Tokens: tokens.{address}.balance ' +
+          '(optional "scope":"any"|"protocol" + "appId"). Labels: labels.{tag_id}. ' +
+          'op: eq, neq, gt, gte, lt, lte, in, nin.',
+      ),
     logic: z
       .enum(['and', 'or'])
       .optional()
@@ -119,20 +179,29 @@ profiles.command('search', {
     },
     {
       options: {
-        conditions: '[{"field":"net_worth_usd","op":"gt","value":10000}]',
+        conditions: '[{"field":"users.net_worth_usd","op":"gt","value":10000}]',
         size: 20,
       },
-      description: 'Search profiles with net worth > 10000',
+      description: 'Search profiles with net worth > $10k',
     },
     {
       options: {
-        conditions: '[{"field":"net_worth_usd","op":"gt","value":10000},{"field":"tx_count","op":"gt","value":50}]',
+        conditions:
+          '[{"field":"users.net_worth_usd","op":"gt","value":10000},{"field":"users.volume","op":"gt","value":1000}]',
         logic: 'or',
         size: 20,
       },
-      description: 'Search profiles matching either condition',
+      description: 'Search profiles matching either condition (net worth or volume)',
+    },
+    {
+      options: {
+        conditions: '[{"field":"chains.1.balance","op":"gt","value":1000}]',
+        size: 20,
+      },
+      description: 'Search profiles with > $1k balance on Ethereum (chain 1)',
     },
   ],
+  hint: 'Requires profiles:read scope on your API key. Filter "field" must be a typed path (e.g. users.net_worth_usd) — bare names are ignored by the API.',
   run({ args: _args, options }) {
     return searchProfilesRun(options)
   },
@@ -235,7 +304,7 @@ export function buildCreateLabelBody(options: CreateProfileLabelOptions): unknow
     if (options.chainId) single.chain_id = options.chainId
     return single
   }
-  throw new Error('Provide --tagId (single label) or --labels (batch JSON array)')
+  throw new Error('Provide --tag-id (single label) or --labels (batch JSON array)')
 }
 
 export function createProfileLabelRun(
@@ -299,7 +368,7 @@ export interface DeleteProfileLabelOptions {
 
 export function buildDeleteLabelBody(options: DeleteProfileLabelOptions) {
   if (!options.tagId) {
-    throw new Error('--tagId is required')
+    throw new Error('--tag-id is required')
   }
   const body: Record<string, string> = { tag_id: options.tagId }
   if (options.chainId) body.chain_id = options.chainId

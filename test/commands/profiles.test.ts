@@ -78,8 +78,8 @@ describe('commands/profiles', function () {
   });
 
   describe('createProfileLabelRun() — local validation', function () {
-    it('throws when neither --tagId nor --labels is provided', function () {
-      expect(() => createProfileLabelRun(KNOWN_ADDRESS, {})).to.throw(/tagId|labels/);
+    it('throws when neither --tag-id nor --labels is provided', function () {
+      expect(() => createProfileLabelRun(KNOWN_ADDRESS, {})).to.throw(/tag-id|labels/);
     });
 
     it('throws on invalid labels JSON', function () {
@@ -96,10 +96,10 @@ describe('commands/profiles', function () {
   });
 
   describe('deleteProfileLabelRun() — local validation', function () {
-    it('throws when --tagId is missing', function () {
+    it('throws when --tag-id is missing', function () {
       expect(() =>
         deleteProfileLabelRun(KNOWN_ADDRESS, { tagId: '' }),
-      ).to.throw(/tagId/);
+      ).to.throw(/tag-id/);
     });
   });
 });
