@@ -37,16 +37,11 @@ export interface AnalyticsOptions {
   params?: string
 }
 
-// `funnel` and `flow` take camelCase `dateFrom`/`dateTo` query params; every
-// other pipe takes snake_case `date_from`/`date_to`. Sending the wrong casing
-// makes the API's strict validator reject the request as
-// "Invalid query parameters".
-const CAMEL_DATE_PIPES = new Set(['funnel', 'flow'])
-
 // Keys --params is not allowed to set: they have dedicated, validated flags
 // (--dateFrom/--dateTo/--filters). Rejecting them prevents --params from
 // silently overriding validated input or pushing an invalid `filters` value
-// (e.g. a non-JSON string) over the wire.
+// (e.g. a non-JSON string) over the wire. Both casings of the date keys are
+// rejected so a stray camelCase key can't slip through unvalidated.
 const RESERVED_PARAM_KEYS = new Set([
   'date_from',
   'date_to',
@@ -58,8 +53,8 @@ const RESERVED_PARAM_KEYS = new Set([
 /**
  * Build the query-string params for an analytics pipe request.
  *
- * - `dateFrom`/`dateTo` map to `date_from`/`date_to`, except for `funnel` and
- *   `flow` which use camelCase `dateFrom`/`dateTo` (see CAMEL_DATE_PIPES).
+ * - `dateFrom`/`dateTo` map to the API's snake_case `date_from`/`date_to`.
+ *   All pipes, including `funnel` and `flow`, use snake_case.
  * - `filters` is a JSON array of `{ field, op, value }` objects, re-serialized
  *   as a JSON string (the pipe expects a JSON-encoded array in the query).
  * - `params` is a JSON object of any pipe-specific params (e.g. funnel
@@ -71,13 +66,9 @@ const RESERVED_PARAM_KEYS = new Set([
  * Exported for unit testing.
  */
 export function buildAnalyticsParams(
-  pipe: string,
   options: AnalyticsOptions,
 ): Record<string, string | number | boolean> {
   const out: Record<string, string | number | boolean> = {}
-  const camelDates = CAMEL_DATE_PIPES.has(pipe)
-  const fromKey = camelDates ? 'dateFrom' : 'date_from'
-  const toKey = camelDates ? 'dateTo' : 'date_to'
 
   // --params first, so the validated flags below override it.
   if (options.params) {
@@ -105,8 +96,8 @@ export function buildAnalyticsParams(
     }
   }
 
-  if (options.dateFrom) out[fromKey] = options.dateFrom
-  if (options.dateTo) out[toKey] = options.dateTo
+  if (options.dateFrom) out.date_from = options.dateFrom
+  if (options.dateTo) out.date_to = options.dateTo
 
   if (options.filters) {
     let parsed: unknown
@@ -131,7 +122,7 @@ export function buildAnalyticsParams(
 export function runAnalytics(pipe: string, options: AnalyticsOptions) {
   requireApiKey()
   const client = createClient()
-  return client.get(`/v0/${pipe}`, { params: buildAnalyticsParams(pipe, options) })
+  return client.get(`/v0/${pipe}`, { params: buildAnalyticsParams(options) })
 }
 
 const sharedOptions = z.object({
