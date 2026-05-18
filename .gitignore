@@ -17,6 +17,10 @@ dist/
 *.swp
 *.swo
 
+# Lockfiles — this project uses pnpm; npm/yarn lockfiles are not tracked
+package-lock.json
+yarn.lock
+
 # Logs
 *.log
 npm-debug.log*
