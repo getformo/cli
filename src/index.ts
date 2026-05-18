@@ -2,6 +2,7 @@
 import { Cli, z } from "incur";
 
 import { alerts } from "./commands/alerts";
+import { analytics } from "./commands/analytics";
 import { boards } from "./commands/boards";
 import { charts } from "./commands/charts";
 import { contracts } from "./commands/contracts";
@@ -76,6 +77,9 @@ const cli = Cli.create("formo", {
       "get the profile for wallet 0xabc",
       "search profiles with net worth > 10000",
       "run a SQL query on my analytics data",
+      "show traffic KPIs for the last 7 days",
+      "get the conversion funnel for the last month",
+      "list the top wallets by activity",
       "search profiles ordered by last_onchain desc",
       "list all project alerts",
       "create an alert for high-value transactions",
@@ -284,6 +288,7 @@ cli.command("status", {
 
 cli.command(profiles);
 cli.command(query);
+cli.command(analytics);
 cli.command(alerts);
 cli.command(boards);
 cli.command(charts);

@@ -92,8 +92,9 @@ Search wallet profiles with filters, sorting, and pagination. Returns a `Paginat
 formo profiles search --size 10
 formo profiles search --orderBy net_worth_usd --orderDir desc --size 5
 formo profiles search --page 2 --size 20
-formo profiles search --conditions '[{"field":"net_worth_usd","op":"gt","value":10000}]' --size 20
-formo profiles search --conditions '[{"field":"net_worth_usd","op":"gt","value":10000},{"field":"tx_count","op":"gt","value":50}]' --logic or --size 20
+formo profiles search --conditions '[{"field":"users.net_worth_usd","op":"gt","value":10000}]' --size 20
+formo profiles search --conditions '[{"field":"users.net_worth_usd","op":"gt","value":10000},{"field":"users.volume","op":"gt","value":1000}]' --logic or --size 20
+formo profiles search --conditions '[{"field":"chains.1.balance","op":"gt","value":1000}]' --size 20
 ```
 
 ### `profiles update <address>`
@@ -313,6 +314,31 @@ formo query run "SELECT address, net_worth_usd FROM wallet_profiles ORDER BY net
 
 ---
 
+## `formo analytics`
+
+Pre-built analytics pipes — the same data that powers the Formo dashboard — without writing SQL. Each pipe is a subcommand: `formo analytics <pipe>`.
+
+**Pipes:** `kpis`, `event_timeseries`, `funnel`, `flow`, `frequency`, `lifecycle`, `retention`, `revenue_overview`, `revenue_by_metric`, `revenue_timeseries`, `volume_by_metric`, `top_chains`, `top_events`, `top_locations`, `top_pages`, `top_sources`, `top_wallets`
+
+| Option | Description |
+|---|---|
+| `--dateFrom` | Inclusive start date `YYYY-MM-DD` (default: 7 days before `--dateTo`) |
+| `--dateTo` | Inclusive end date `YYYY-MM-DD` (default: today) |
+| `--filters` | JSON array of `[{field,op,value}]`. Use `in`/`notIn` with a pipe-delimited value (e.g. `"chrome\|firefox"`) |
+| `--params` | JSON object of pipe-specific params merged into the query (e.g. `{"limit":10,"group_by":"device"}`) |
+
+```bash
+formo analytics kpis
+formo analytics kpis --dateFrom 2026-04-01 --dateTo 2026-04-30 --params '{"group_by":"device"}'
+formo analytics funnel --dateFrom 2026-04-01 --dateTo 2026-04-30 --params '{"steps":[{"type":"event","event":"page","name":"page::0","filters":[]},{"type":"track","event":"connect","name":"connect::1","filters":[]}],"window_seconds":86400}'
+formo analytics top_wallets --dateFrom 2026-04-01 --dateTo 2026-04-30 --params '{"limit":10}'
+formo analytics retention --filters '[{"field":"location","op":"equals","value":"US"}]'
+```
+
+> Requires `query:read` scope. Run `formo analytics <pipe> --help` for the pipe-specific params accepted via `--params`.
+
+---
+
 ## `formo import`
 
 ### `import wallets`
@@ -336,16 +362,30 @@ formo import wallets --addresses '["0xabc...","0xdef..."]' --writeKey write_key_
 
 ```json
 [
-  { "field": "net_worth_usd", "op": "gt", "value": 10000 },
-  { "field": "tx_count", "op": "gte", "value": 5 }
+  { "field": "users.net_worth_usd", "op": "gt", "value": 10000 },
+  { "field": "chains.1.balance", "op": "gte", "value": 1000 }
 ]
 ```
 
+> **The `field` must be a typed path.** A bare name like `net_worth_usd` is
+> silently ignored by the API (no error, no filtering — the search returns
+> everything). Always prefix the field with its type.
+
 | Field | Type | Description |
 |---|---|---|
-| `field` | `string` | Profile field to filter on |
+| `field` | `string` | Typed path (see prefixes below) |
 | `op` | `string` | `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `nin` |
 | `value` | `any` | Value to compare against |
+| `scope` | `string` | _(token filters only)_ `any` or `protocol` |
+| `appId` | `string` | _(token filters with `scope: protocol`)_ e.g. `aave-v3` |
+
+| Prefix | Examples |
+|---|---|
+| `users.` | `users.net_worth_usd`, `users.volume`, `users.revenue`, `users.points`, `users.device`, `users.location`, `users.lifecycle`, `users.ens`, `users.farcaster` |
+| `chains.` | `chains.balance` (any chain), `chains.1.balance` (Ethereum) |
+| `apps.` | `apps.uniswap-v3.balance` |
+| `tokens.` | `tokens.0xA0b8…48.balance` |
+| `labels.` | `labels.coinbase.verified_account` |
 
 Combine multiple conditions with `--logic and` (default) or `--logic or`.
 

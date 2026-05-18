@@ -32,6 +32,7 @@ profiles.command('get', {
       description: 'Get profile with expanded labels and chains',
     },
   ],
+  hint: 'Requires profiles:read scope on your API key.',
   run({ args, options }) {
     return getProfileRun(args.address, options.expand)
   },
@@ -101,7 +102,17 @@ profiles.command('search', {
     conditions: z
       .string()
       .optional()
-      .describe('JSON array of FilterCondition objects for advanced filtering'),
+      .describe(
+        'JSON array of FilterCondition objects: [{"field","op","value"}]. ' +
+          'The "field" MUST be a typed path — a bare name like "net_worth_usd" is silently ignored. ' +
+          'Profile: users.net_worth_usd, users.volume, users.revenue, users.points. ' +
+          'Engagement: users.device, users.browser, users.os, users.location, users.lifecycle. ' +
+          'Socials: users.ens, users.farcaster, users.lens, etc. ' +
+          'Chains: chains.balance or chains.{chain_id}.balance. ' +
+          'Apps: apps.{app_id}.balance. Tokens: tokens.{address}.balance ' +
+          '(optional "scope":"any"|"protocol" + "appId"). Labels: labels.{tag_id}. ' +
+          'op: eq, neq, gt, gte, lt, lte, in, nin.',
+      ),
     logic: z
       .enum(['and', 'or'])
       .optional()
@@ -119,20 +130,29 @@ profiles.command('search', {
     },
     {
       options: {
-        conditions: '[{"field":"net_worth_usd","op":"gt","value":10000}]',
+        conditions: '[{"field":"users.net_worth_usd","op":"gt","value":10000}]',
         size: 20,
       },
-      description: 'Search profiles with net worth > 10000',
+      description: 'Search profiles with net worth > $10k',
     },
     {
       options: {
-        conditions: '[{"field":"net_worth_usd","op":"gt","value":10000},{"field":"tx_count","op":"gt","value":50}]',
+        conditions:
+          '[{"field":"users.net_worth_usd","op":"gt","value":10000},{"field":"users.volume","op":"gt","value":1000}]',
         logic: 'or',
         size: 20,
       },
-      description: 'Search profiles matching either condition',
+      description: 'Search profiles matching either condition (net worth or volume)',
+    },
+    {
+      options: {
+        conditions: '[{"field":"chains.1.balance","op":"gt","value":1000}]',
+        size: 20,
+      },
+      description: 'Search profiles with > $1k balance on Ethereum (chain 1)',
     },
   ],
+  hint: 'Requires profiles:read scope on your API key. Filter "field" must be a typed path (e.g. users.net_worth_usd) — bare names are ignored by the API.',
   run({ args: _args, options }) {
     return searchProfilesRun(options)
   },
