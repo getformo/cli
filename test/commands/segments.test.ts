@@ -16,8 +16,8 @@ describe('commands/segments', function () {
   });
 
   describe('createSegmentRun() — local validation', function () {
-    it('throws on invalid filterSets JSON', function () {
-      expect(() => createSegmentRun({ title: 'x', filterSets: 'not-json' })).to.throw(/filterSets/);
+    it('throws on invalid --filter-sets JSON', function () {
+      expect(() => createSegmentRun({ title: 'x', filterSets: 'not-json' })).to.throw(/filter-sets/);
     });
   });
 });

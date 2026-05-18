@@ -64,7 +64,7 @@ export function buildAlertBody(options: CreateAlertOptions | UpdateAlertOptions)
     try {
       body.trigger_filters = JSON.parse(options.triggerFilters)
     } catch {
-      throw new Error('--triggerFilters must be a valid JSON array')
+      throw new Error('--trigger-filters must be a valid JSON array')
     }
   }
 

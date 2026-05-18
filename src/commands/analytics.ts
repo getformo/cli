@@ -38,7 +38,7 @@ export interface AnalyticsOptions {
 }
 
 // Keys --params is not allowed to set: they have dedicated, validated flags
-// (--dateFrom/--dateTo/--filters). Rejecting them prevents --params from
+// (--date-from/--date-to/--filters). Rejecting them prevents --params from
 // silently overriding validated input or pushing an invalid `filters` value
 // (e.g. a non-JSON string) over the wire. Both casings of the date keys are
 // rejected so a stray camelCase key can't slip through unvalidated.
@@ -84,7 +84,7 @@ export function buildAnalyticsParams(
     for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
       if (RESERVED_PARAM_KEYS.has(key)) {
         throw new Error(
-          `--params may not set "${key}" — use the --dateFrom/--dateTo/--filters flags instead`,
+          `--params may not set "${key}" — use the --date-from/--date-to/--filters flags instead`,
         )
       }
       if (value === null || value === undefined) continue
@@ -129,7 +129,7 @@ const sharedOptions = z.object({
   dateFrom: z
     .string()
     .optional()
-    .describe('Inclusive start date YYYY-MM-DD (default: 7 days before --dateTo)'),
+    .describe('Inclusive start date YYYY-MM-DD (default: 7 days before --date-to)'),
   dateTo: z
     .string()
     .optional()
@@ -148,7 +148,7 @@ const sharedOptions = z.object({
       'JSON object of pipe-specific params merged into the query, e.g. ' +
         '{"limit":10,"group_by":"device"} or funnel ' +
         '{"steps":[{"type":"event","event":"page","name":"page::0","filters":[]}]}. ' +
-        'May not set dateFrom/dateTo/filters (use the dedicated flags).',
+        'May not set date_from/date_to/filters; use the dedicated --date-from/--date-to/--filters flags.',
     ),
 })
 

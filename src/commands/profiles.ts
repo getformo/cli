@@ -255,7 +255,7 @@ export function buildCreateLabelBody(options: CreateProfileLabelOptions): unknow
     if (options.chainId) single.chain_id = options.chainId
     return single
   }
-  throw new Error('Provide --tagId (single label) or --labels (batch JSON array)')
+  throw new Error('Provide --tag-id (single label) or --labels (batch JSON array)')
 }
 
 export function createProfileLabelRun(
@@ -319,7 +319,7 @@ export interface DeleteProfileLabelOptions {
 
 export function buildDeleteLabelBody(options: DeleteProfileLabelOptions) {
   if (!options.tagId) {
-    throw new Error('--tagId is required')
+    throw new Error('--tag-id is required')
   }
   const body: Record<string, string> = { tag_id: options.tagId }
   if (options.chainId) body.chain_id = options.chainId

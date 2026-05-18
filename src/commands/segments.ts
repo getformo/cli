@@ -34,7 +34,7 @@ export function buildCreateSegmentBody(options: CreateSegmentOptions) {
   try {
     parsedFilterSets = JSON.parse(options.filterSets)
   } catch {
-    throw new Error('--filterSets must be a valid JSON array')
+    throw new Error('--filter-sets must be a valid JSON array')
   }
 
   return {

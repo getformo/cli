@@ -145,7 +145,7 @@ describe('commands / body builders', function () {
   // ── Profiles labels create ──
 
   describe('buildCreateLabelBody()', function () {
-    it('produces a single-label object body when --tagId is given', function () {
+    it('produces a single-label object body when --tag-id is given', function () {
       const body = buildCreateLabelBody({ tagId: 'vip' });
       expect(body).to.deep.equal({ tag_id: 'vip' });
     });
@@ -173,7 +173,7 @@ describe('commands / body builders', function () {
       ]);
     });
 
-    it('--labels takes precedence over --tagId when both are provided', function () {
+    it('--labels takes precedence over --tag-id when both are provided', function () {
       const body = buildCreateLabelBody({
         tagId: 'should-be-ignored',
         labels: '[{"tag_id":"vip"}]',
