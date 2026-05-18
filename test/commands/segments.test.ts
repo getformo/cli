@@ -19,5 +19,11 @@ describe('commands/segments', function () {
     it('throws on invalid --filter-sets JSON', function () {
       expect(() => createSegmentRun({ title: 'x', filterSets: 'not-json' })).to.throw(/filter-sets/);
     });
+
+    it('throws when --filter-sets is valid JSON but not an array', function () {
+      expect(() => createSegmentRun({ title: 'x', filterSets: '{"a":1}' })).to.throw(/filter-sets/);
+      expect(() => createSegmentRun({ title: 'x', filterSets: '5' })).to.throw(/filter-sets/);
+      expect(() => createSegmentRun({ title: 'x', filterSets: '"foo"' })).to.throw(/filter-sets/);
+    });
   });
 });

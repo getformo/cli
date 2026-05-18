@@ -121,6 +121,12 @@ export function searchProfilesRun(options: SearchProfilesOptions) {
     }
   }
 
+  // INTENTIONAL: the Formo search API is `GET /v0/profiles` with the
+  // `{ conditions, logic }` filter object in the *request body* (see
+  // docs.formo.so/api/profiles/search — it has a "Request Body (Filters)"
+  // section under a GET endpoint). This GET-with-body shape is the
+  // documented, server-supported contract. Do NOT "fix" it to POST — that
+  // breaks the API. Filter-less searches still go over query params only.
   return client.request({ method: 'get', url: '/v0/profiles/', params, data: body })
 }
 
