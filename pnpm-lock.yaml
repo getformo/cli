@@ -7,6 +7,9 @@ settings:
 overrides:
   serialize-javascript: '>=7.0.5'
 
+patchedDependencies:
+  incur: 61a525bed57fffbfcf01a35647a140e86da48ff828c37fd5088e80fe1cd3fef2
+
 importers:
 
   .:
@@ -16,7 +19,7 @@ importers:
         version: 1.16.1
       incur:
         specifier: ^0.3.4
-        version: 0.3.25
+        version: 0.3.25(patch_hash=61a525bed57fffbfcf01a35647a140e86da48ff828c37fd5088e80fe1cd3fef2)
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -1720,7 +1723,7 @@ snapshots:
 
   imurmurhash@0.1.4: {}
 
-  incur@0.3.25:
+  incur@0.3.25(patch_hash=61a525bed57fffbfcf01a35647a140e86da48ff828c37fd5088e80fe1cd3fef2):
     dependencies:
       '@cfworker/json-schema': 4.1.1
       '@modelcontextprotocol/server': 2.0.0-alpha.2(@cfworker/json-schema@4.1.1)

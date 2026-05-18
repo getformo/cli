@@ -49,6 +49,58 @@ export interface SearchProfilesOptions {
   logic?: 'and' | 'or'
 }
 
+// Accepted first segments for a FilterCondition `field`, mirroring the API's
+// parseField(). A field whose prefix is not one of these is silently ignored
+// server-side (no error, no filtering — the search returns everything), so we
+// reject it client-side with an actionable message instead.
+const CONDITION_FIELD_PREFIXES = new Set([
+  'user',
+  'users',
+  'chain',
+  'chains',
+  'app',
+  'apps',
+  'token',
+  'tokens',
+  'label',
+  'labels',
+])
+
+/**
+ * Parse and validate the --conditions JSON. Ensures it is an array of
+ * `{ field, op, value }` objects whose `field` is a typed path (e.g.
+ * `users.net_worth_usd`) — a bare name like `net_worth_usd` is silently
+ * dropped by the API, so it is rejected here. Exported for unit testing.
+ */
+export function parseSearchConditions(raw: string): unknown[] {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    throw new Error('--conditions must be a valid JSON array of FilterCondition objects')
+  }
+  if (!Array.isArray(parsed)) {
+    throw new Error('--conditions must be a valid JSON array of FilterCondition objects')
+  }
+  for (const cond of parsed) {
+    if (!cond || typeof cond !== 'object' || Array.isArray(cond)) {
+      throw new Error('--conditions: each entry must be an object with field, op, value')
+    }
+    const field = (cond as { field?: unknown }).field
+    if (typeof field !== 'string' || field.length === 0) {
+      throw new Error('--conditions: each entry must have a non-empty string "field"')
+    }
+    if (!field.includes('.') || !CONDITION_FIELD_PREFIXES.has(field.split('.')[0])) {
+      throw new Error(
+        `--conditions: field "${field}" must be a typed path — prefix it with ` +
+          'users., chains., apps., tokens., or labels. ' +
+          '(a bare name is silently ignored by the API and returns the entire unfiltered dataset)',
+      )
+    }
+  }
+  return parsed
+}
+
 export function searchProfilesRun(options: SearchProfilesOptions) {
   requireApiKey()
   const client = createClient()
@@ -63,12 +115,9 @@ export function searchProfilesRun(options: SearchProfilesOptions) {
 
   let body: object | undefined
   if (options.conditions) {
-    try {
-      const conditions = JSON.parse(options.conditions)
-      if (!Array.isArray(conditions)) throw new Error('not an array')
-      body = { conditions, logic: options.logic ?? 'and' }
-    } catch {
-      throw new Error('--conditions must be valid JSON array of FilterCondition objects')
+    body = {
+      conditions: parseSearchConditions(options.conditions),
+      logic: options.logic ?? 'and',
     }
   }
 

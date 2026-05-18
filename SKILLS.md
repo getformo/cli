@@ -65,8 +65,8 @@ formo profiles search [options]
 | Option | Values | Description |
 |---|---|---|
 | `--address` | `string` | Filter to a specific wallet address |
-| `--limit` | `number` | Max results (default: API default) |
-| `--offset` | `number` | Pagination offset |
+| `--page` | `number` | Page number (1-indexed, default `1`) |
+| `--size` | `number` | Page size (default `100`, max `1000`) |
 | `--order-by` | see below | Field to sort by |
 | `--order-dir` | `asc`, `desc` | Sort direction |
 | `--expand` | `string` | Comma-separated fields to expand |
@@ -77,19 +77,19 @@ formo profiles search [options]
 **Examples:**
 ```bash
 # First 10 profiles
-formo profiles search --limit 10
+formo profiles search --size 10
 
 # Top 5 by net worth (descending)
-formo profiles search --order-by net_worth_usd --order-dir desc --limit 5
+formo profiles search --order-by net_worth_usd --order-dir desc --size 5
 
 # Profiles with net worth over $10k
-formo profiles search --conditions '[{"field":"users.net_worth_usd","op":"gt","value":10000}]' --limit 20
+formo profiles search --conditions '[{"field":"users.net_worth_usd","op":"gt","value":10000}]' --size 20
 
 # Profiles with > $1k balance on Ethereum (chain 1)
-formo profiles search --conditions '[{"field":"chains.1.balance","op":"gt","value":1000}]' --limit 20
+formo profiles search --conditions '[{"field":"chains.1.balance","op":"gt","value":1000}]' --size 20
 
-# High-activity wallets, sorted by tx count
-formo profiles search --order-by tx_count --order-dir desc --limit 10 --expand labels
+# Second page of 20, sorted by tx count
+formo profiles search --order-by tx_count --order-dir desc --page 2 --size 20 --expand labels
 ```
 
 **FilterCondition schema:**

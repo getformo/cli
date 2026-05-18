@@ -1,0 +1,13 @@
+diff --git a/dist/Cli.js b/dist/Cli.js
+index 1467ccf7a6eb6c2bf1e7a5172631032ea3c342e7..1286e927e8b3449fec56601fef633eef68391b4e 100644
+--- a/dist/Cli.js
++++ b/dist/Cli.js
+@@ -2113,7 +2113,7 @@ export function formatExamples(examples) {
+                 parts.push(String(value));
+         if (ex.options)
+             for (const [key, value] of Object.entries(ex.options))
+-                parts.push(`--${key} ${value}`);
++                parts.push(`--${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)} ${value}`);
+         const result = { command: parts.join(' ') };
+         if (ex.description)
+             result.description = ex.description;
