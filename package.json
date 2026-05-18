@@ -1,6 +1,6 @@
 {
   "name": "@formo/cli",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "packageManager": "pnpm@11.1.2",
   "description": "Formo API CLI — query profiles and analytics data",
   "repository": {
