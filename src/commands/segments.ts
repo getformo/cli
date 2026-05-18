@@ -33,6 +33,9 @@ export function buildCreateSegmentBody(options: CreateSegmentOptions) {
   let parsedFilterSets: unknown
   try {
     parsedFilterSets = JSON.parse(options.filterSets)
+    if (!Array.isArray(parsedFilterSets)) {
+      throw new Error('not an array')
+    }
   } catch {
     throw new Error('--filter-sets must be a valid JSON array')
   }

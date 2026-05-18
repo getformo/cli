@@ -12,7 +12,28 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # Workflow-context values are bound to env here and referenced as
+    # shell variables ($TAG/$REPO/$COMMIT_SHA) in run: blocks instead of
+    # `${{ }}` interpolation, so an attacker-controlled tag name cannot be
+    # injected into a script body. Tag pushes are attacker-controllable:
+    # anyone able to push a v* tag triggers this workflow.
+    env:
+      TAG: ${{ github.ref_name }}
+      REPO: ${{ github.repository }}
+      COMMIT_SHA: ${{ github.sha }}
     steps:
+      - name: Validate tag format
+        # Fail closed before any other step runs. A strict semver gate
+        # rejects a tag containing shell metacharacters ($(), backticks,
+        # ;, |) so it never reaches a later run: block.
+        run: |
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "❌ Error: Tag '$TAG' is not a valid vMAJOR.MINOR.PATCH semver tag"
+            echo "Releases must be triggered by a strict semver tag, e.g. v1.2.3 or v1.2.3-rc.1"
+            exit 1
+          fi
+          echo "✅ Tag format validated: $TAG"
+
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -21,7 +42,7 @@ jobs:
       - name: Verify tag is on main branch
         run: |
           git fetch origin main
-          if ! git merge-base --is-ancestor ${{ github.sha }} origin/main; then
+          if ! git merge-base --is-ancestor "$COMMIT_SHA" origin/main; then
             echo "❌ Tag is not on the main branch — aborting release"
             exit 1
           fi
@@ -46,19 +67,23 @@ jobs:
       - name: Extract version from tag
         id: version
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          # $GITHUB_REF is a runner-provided env var (safe shell
+          # expansion, not template interpolation); the tag was strictly
+          # validated above, so VERSION is a clean semver string.
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Publishing version: $VERSION"
 
       - name: Verify tag matches package.json version
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          TAG_VERSION=${{ steps.version.outputs.version }}
           PKG_VERSION=$(node -p "require('./package.json').version")
-          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
-            echo "❌ Tag v$TAG_VERSION does not match package.json version $PKG_VERSION"
+          if [ "$VERSION" != "$PKG_VERSION" ]; then
+            echo "❌ Tag v$VERSION does not match package.json version $PKG_VERSION"
             exit 1
           fi
-          echo "✅ Version confirmed: $TAG_VERSION"
+          echo "✅ Version confirmed: $VERSION"
 
       - name: Build
         run: pnpm build
@@ -75,11 +100,11 @@ jobs:
 
       - name: Generate release notes
         id: release_notes
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          CURRENT_TAG=${{ github.ref_name }}
-          PREV_TAG=$(git tag -l 'v*' --sort=-version:refname | grep -v "^${CURRENT_TAG}$" | head -1)
+          PREV_TAG=$(git tag -l 'v*' --sort=-version:refname | grep -v "^${TAG}$" | head -1)
           RELEASE_DATE=$(date +%Y-%m-%d)
-          VERSION=${{ steps.version.outputs.version }}
 
           if [ -n "$PREV_TAG" ]; then
             COMMITS=$(git log ${PREV_TAG}..HEAD --pretty=format:"%s    %h" --no-merges)
@@ -96,11 +121,11 @@ jobs:
             if [[ $message =~ \(#([0-9]+)\) ]]; then
               PR_NUM="${BASH_REMATCH[1]}"
               CLEAN_MESSAGE=$(echo "$message" | sed -E 's/ ?\(#[0-9]+\)//')
-              PR_LINK="[#$PR_NUM](https://github.com/${{ github.repository }}/pull/$PR_NUM)"
-              COMMIT_LINK="[$hash](https://github.com/${{ github.repository }}/commit/$hash)"
+              PR_LINK="[#$PR_NUM](https://github.com/${REPO}/pull/$PR_NUM)"
+              COMMIT_LINK="[$hash](https://github.com/${REPO}/commit/$hash)"
               ITEM="$CLEAN_MESSAGE ($PR_LINK) ($COMMIT_LINK)"
             else
-              COMMIT_LINK="[$hash](https://github.com/${{ github.repository }}/commit/$hash)"
+              COMMIT_LINK="[$hash](https://github.com/${REPO}/commit/$hash)"
               ITEM="$message ($COMMIT_LINK)"
             fi
 
