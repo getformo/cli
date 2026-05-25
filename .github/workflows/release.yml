@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     # Workflow-context values are bound to env here and referenced as
     # shell variables ($TAG/$REPO/$COMMIT_SHA) in run: blocks instead of
     # `${{ }}` interpolation, so an attacker-controlled tag name cannot be
