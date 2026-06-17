@@ -1,5 +1,6 @@
 import { Cli, z } from 'incur'
 import { createClient, requireApiKey } from '../lib/client'
+import { stripTrailingFormatClause } from '../lib/sql'
 
 export const query = Cli.create('query', {
   description: 'SQL analytics query commands',
@@ -8,7 +9,10 @@ export const query = Cli.create('query', {
 export function queryRunRun(sql: string) {
   requireApiKey()
   const client = createClient()
-  return client.post('/v0/query/', { query: sql })
+  // The API wraps the query in a paginating subquery with its own
+  // `FORMAT JSON`. ClickHouse forbids a `FORMAT` clause inside a subquery, so
+  // strip any trailing `FORMAT`/semicolon before sending to avoid a 400.
+  return client.post('/v0/query/', { query: stripTrailingFormatClause(sql) })
 }
 
 query.command('run', {
