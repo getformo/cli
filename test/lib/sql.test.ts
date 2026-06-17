@@ -105,6 +105,17 @@ describe('lib/sql / stripTrailingFormatClause', function () {
       expect(stripTrailingFormatClause(sql)).to.equal(sql);
     });
 
+    it('ignores FORMAT inside a # line comment (MySQL-style)', function () {
+      const sql = 'SELECT 1 # FORMAT CSV';
+      expect(stripTrailingFormatClause(sql)).to.equal(sql);
+    });
+
+    it('strips a real FORMAT clause trailed by a # comment', function () {
+      expect(stripTrailingFormatClause('SELECT 1 FORMAT CSV # note')).to.equal(
+        'SELECT 1',
+      );
+    });
+
     it('ignores FORMAT inside a block comment', function () {
       const sql = 'SELECT 1 /* FORMAT CSV */';
       expect(stripTrailingFormatClause(sql)).to.equal(sql);

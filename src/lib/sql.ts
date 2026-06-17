@@ -92,8 +92,9 @@ function maskLiterals(sql: string): string {
     const c = sql[i]
     const next = i + 1 < n ? sql[i + 1] : ''
 
-    // Line comment: -- ... to end of line
-    if (c === '-' && next === '-') {
+    // Line comment: -- ... or # ... to end of line. ClickHouse accepts `#`
+    // and `#!` line comments for MySQL compatibility.
+    if ((c === '-' && next === '-') || c === '#') {
       while (i < n && sql[i] !== '\n') {
         out.push(' ')
         i++
