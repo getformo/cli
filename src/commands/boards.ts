@@ -5,20 +5,36 @@ export const boards = Cli.create('boards', {
   description: 'Dashboard board commands — create, list, update, and delete boards',
 })
 
+export interface PaginationOptions {
+  page?: number
+  size?: number
+}
+
+function buildPaginationParams(options: PaginationOptions = {}) {
+  const params: Record<string, number> = {}
+  if (options.page !== undefined) params.page = options.page
+  if (options.size !== undefined) params.size = options.size
+  return params
+}
+
 // ── List boards ──
 
-export function listBoardsRun() {
+export function listBoardsRun(options: PaginationOptions = {}) {
   requireApiKey()
   const client = createClient()
-  return client.get('/v0/boards/')
+  return client.get('/v0/boards/', { params: buildPaginationParams(options) })
 }
 
 boards.command('list', {
   description: 'List all boards for the project',
+  options: z.object({
+    page: z.coerce.number().optional().describe('Page number (1-indexed, default 1)'),
+    size: z.coerce.number().optional().describe('Page size (default 100, max 200)'),
+  }),
   examples: [{ description: 'List all dashboard boards' }],
   hint: 'Requires boards:read scope on your API key.',
-  run() {
-    return listBoardsRun()
+  run({ options }) {
+    return listBoardsRun(options)
   },
 })
 
@@ -47,17 +63,36 @@ boards.command('get', {
 // ── Create a board ──
 
 export interface CreateBoardOptions {
-  name: string
+  title?: string
+  name?: string
   description?: string
+  isPublic?: boolean
+}
+
+export function buildBoardBody(options: CreateBoardOptions | UpdateBoardOptions) {
+  const title = options.title ?? options.name
+  const body: Record<string, unknown> = {}
+  if (title !== undefined) {
+    if (!title) throw new Error('--title must not be empty')
+    body.title = title
+  }
+  if (options.description !== undefined) {
+    body.description = options.description
+  }
+  if (options.isPublic !== undefined) {
+    body.isPublic = options.isPublic
+  }
+
+  return body
 }
 
 export function createBoardRun(options: CreateBoardOptions) {
   requireApiKey()
   const client = createClient()
 
-  const body: Record<string, unknown> = { name: options.name }
-  if (options.description) {
-    body.description = options.description
+  const body = buildBoardBody(options)
+  if (!body.title) {
+    throw new Error('Provide --title for the board name')
   }
 
   return client.post('/v0/boards/', body)
@@ -66,16 +101,18 @@ export function createBoardRun(options: CreateBoardOptions) {
 boards.command('create', {
   description: 'Create a new dashboard board',
   options: z.object({
-    name: z.string().describe('Board name'),
+    title: z.string().optional().describe('Board title'),
+    name: z.string().optional().describe('Deprecated alias for --title').meta({ deprecated: true }),
     description: z.string().optional().describe('Board description'),
+    isPublic: z.boolean().optional().describe('Whether the board is publicly viewable'),
   }),
   examples: [
     {
-      options: { name: 'KPI Dashboard' },
+      options: { title: 'KPI Dashboard' },
       description: 'Create a board',
     },
     {
-      options: { name: 'Revenue Metrics', description: 'Weekly revenue tracking' },
+      options: { title: 'Revenue Metrics', description: 'Weekly revenue tracking' },
       description: 'Create a board with description',
     },
   ],
@@ -88,17 +125,20 @@ boards.command('create', {
 // ── Update a board ──
 
 export interface UpdateBoardOptions {
+  title?: string
   name?: string
   description?: string
+  isPublic?: boolean
 }
 
 export function updateBoardRun(boardId: string, options: UpdateBoardOptions) {
   requireApiKey()
   const client = createClient()
 
-  const body: Record<string, unknown> = {}
-  if (options.name !== undefined) body.name = options.name
-  if (options.description !== undefined) body.description = options.description
+  const body = buildBoardBody(options)
+  if (Object.keys(body).length === 0) {
+    throw new Error('Provide at least one of --title, --description, or --is-public')
+  }
 
   return client.patch(`/v0/boards/${encodeURIComponent(boardId)}`, body)
 }
@@ -109,13 +149,15 @@ boards.command('update', {
     boardId: z.string().describe('Board ID to update'),
   }),
   options: z.object({
-    name: z.string().optional().describe('New board name'),
+    title: z.string().optional().describe('New board title'),
+    name: z.string().optional().describe('Deprecated alias for --title').meta({ deprecated: true }),
     description: z.string().optional().describe('New board description'),
+    isPublic: z.boolean().optional().describe('Whether the board is publicly viewable'),
   }),
   examples: [
     {
       args: { boardId: 'board_abc123' },
-      options: { name: 'Renamed Board' },
+      options: { title: 'Renamed Board' },
       description: 'Rename a board',
     },
   ],

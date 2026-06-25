@@ -6,16 +6,17 @@ import { analytics } from "./commands/analytics";
 import { boards } from "./commands/boards";
 import { charts } from "./commands/charts";
 import { contracts } from "./commands/contracts";
+import { events } from "./commands/events";
 import { importCmd } from "./commands/import";
 import { profiles } from "./commands/profiles";
 import { query } from "./commands/query";
 import { segments } from "./commands/segments";
+import { getApiBaseUrl } from "./lib/client";
 import { clearConfig, getApiKey, readConfig, saveConfig } from "./lib/config";
 import { banner, color, error, info, success, warn } from "./lib/ui";
 
 const DASHBOARD_URL = "https://app.formo.so";
 const DOCS_URL = "https://docs.formo.so";
-const API_BASE_URL = "https://api.formo.so";
 
 function loginGuide(): string {
   return [
@@ -49,7 +50,7 @@ async function validateAndFetchWorkspace(
   apiKey: string,
 ): Promise<{ workspace: string; projectId: string } | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/validate-api-key`, {
+    const res = await fetch(`${getApiBaseUrl()}/api/validate-api-key`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ apiKey }),
@@ -70,7 +71,7 @@ async function validateAndFetchWorkspace(
 }
 
 const cli = Cli.create("formo", {
-  version: "0.2.0",
+  version: "1.0.1",
   description: "Formo API CLI — Web3 analytics from the terminal",
   sync: {
     suggestions: [
@@ -84,10 +85,15 @@ const cli = Cli.create("formo", {
       "list all project alerts",
       "create an alert for high-value transactions",
       "list charts in a board",
+      "create a line chart in a board",
+      "move or duplicate a dashboard chart",
       "list all tracked contracts",
       "register a new smart contract",
       "list user segments",
       "import wallet addresses",
+      "batch update profile properties with profiles properties batch",
+      "batch upsert labels for wallets",
+      "send raw analytics events",
     ],
   },
 });
@@ -293,6 +299,7 @@ cli.command(alerts);
 cli.command(boards);
 cli.command(charts);
 cli.command(contracts);
+cli.command(events);
 cli.command(segments);
 cli.command(importCmd);
 

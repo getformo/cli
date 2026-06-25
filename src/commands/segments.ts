@@ -7,18 +7,34 @@ export const segments = Cli.create('segments', {
 
 // ── List segments ──
 
-export function listSegmentsRun() {
+export interface PaginationOptions {
+  page?: number
+  size?: number
+}
+
+function buildPaginationParams(options: PaginationOptions = {}) {
+  const params: Record<string, number> = {}
+  if (options.page !== undefined) params.page = options.page
+  if (options.size !== undefined) params.size = options.size
+  return params
+}
+
+export function listSegmentsRun(options: PaginationOptions = {}) {
   requireApiKey()
   const client = createClient()
-  return client.get('/v0/segments/')
+  return client.get('/v0/segments/', { params: buildPaginationParams(options) })
 }
 
 segments.command('list', {
   description: 'List all user segments for the project',
+  options: z.object({
+    page: z.coerce.number().optional().describe('Page number (1-indexed, default 1)'),
+    size: z.coerce.number().optional().describe('Page size (default 100, max 200)'),
+  }),
   examples: [{ description: 'List all project segments' }],
   hint: 'Requires segments:read scope on your API key.',
-  run() {
-    return listSegmentsRun()
+  run({ options }) {
+    return listSegmentsRun(options)
   },
 })
 

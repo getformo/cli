@@ -26,6 +26,13 @@ export FORMO_API_KEY=formo_abc123
 
 Get your API key from `Settings → API Keys` in the [Formo dashboard](https://app.formo.so).
 
+For local development or proxying, override API hosts with:
+
+```bash
+export FORMO_API_BASE_URL=http://localhost:3001
+export FORMO_EVENTS_BASE_URL=http://localhost:3002
+```
+
 ---
 
 ## Auth commands
@@ -114,6 +121,15 @@ formo profiles update vitalik.eth --properties '{"email":"alice@example.com"}'
 
 > Requires `profiles:write` scope.
 
+### `profiles properties batch`
+
+Batch update first-party properties for up to 100 wallets.
+
+```bash
+formo profiles properties batch \
+  --rows '[{"address":"0xd8dA...","display_name":"alice.eth","email":"alice@example.com"}]'
+```
+
 ### `profiles labels create <address>`
 
 Upsert one or more labels on a wallet profile. Provide either a single label via `--tag-id` or a batch via `--labels`.
@@ -123,12 +139,16 @@ Upsert one or more labels on a wallet profile. Provide either a single label via
 | `--tag-id` | Label identifier (e.g. `vip`, `airdrop_eligible`) |
 | `--value` | Optional label value (e.g. tier name, country code) |
 | `--chain-id` | Optional chain identifier the label applies to |
+| `--timestamp` | Optional historical ISO-8601 timestamp |
+| `--is-deleted` | Backfill a historical label removal tombstone |
 | `--labels` | JSON array of `UserLabelInput` objects for batch upsert |
 
 ```bash
 formo profiles labels create 0xd8dA... --tag-id vip
 formo profiles labels create 0xd8dA... --tag-id tier --value gold --chain-id 1
 formo profiles labels create 0xd8dA... --labels '[{"tag_id":"vip"},{"tag_id":"airdrop_eligible","chain_id":"1"}]'
+formo profiles labels create 0xd8dA... --tag-id tier --timestamp 2024-03-15T00:00:00.000Z --is-deleted
+formo profiles labels batch --labels '[{"address":"0xd8dA...","tag_id":"vip","value":"tier-1"}]'
 ```
 
 ### `profiles labels delete <address>`
@@ -164,7 +184,7 @@ Get a single alert by ID.
 | Option | Description |
 |---|---|
 | `--name` | Alert name |
-| `--trigger-type` | Trigger type (e.g. `event`, `threshold`) |
+| `--trigger-type` | Trigger type: `event` or `user` |
 | `--trigger-filters` | JSON array of trigger filter objects |
 | `--recipient` | JSON array of recipient objects |
 | `--secret` | Webhook secret |
@@ -181,11 +201,18 @@ Same options as `create`. Replaces the alert configuration.
 ### `alerts delete <alertId>`
 Delete an alert.
 
-### `alerts toggle <alertId> --status <active|paused>`
-Toggle an alert between `active` and `paused`.
+### `alerts toggle <alertId> --status <active|inactive>`
+Toggle an alert between `active` and `inactive`.
 
 ```bash
-formo alerts toggle alert_abc123 --status paused
+formo alerts toggle alert_abc123 --status inactive
+```
+
+### `alerts test <alertId>`
+Send a test alert delivery with optional sample payloads.
+
+```bash
+formo alerts test alert_abc123 --sample-event '{"event":"transaction","revenue":250}'
 ```
 
 ---
@@ -204,19 +231,21 @@ Get a single board by ID.
 
 | Option | Description |
 |---|---|
-| `--name` | Board name |
+| `--title` | Board title |
 | `--description` | Optional board description |
+| `--is-public` | Make the board publicly viewable |
 
 ```bash
-formo boards create --name "Revenue Metrics" --description "Weekly revenue tracking"
+formo boards create --title "Revenue Metrics" --description "Weekly revenue tracking"
 ```
 
 ### `boards update <boardId>`
 
 | Option | Description |
 |---|---|
-| `--name` | New board name |
+| `--title` | New board title |
 | `--description` | New board description |
+| `--is-public` | Update public visibility |
 
 ### `boards delete <boardId>`
 Delete a board.
@@ -233,11 +262,29 @@ List all charts in a board.
 ### `charts get <chartId> --board-id <boardId>`
 Get a single chart by ID.
 
-### `charts create --board-id <boardId> --body '<json>'`
-Create a chart from a JSON config string.
+### `charts meta --board-id <boardId>`
+List lightweight chart metadata without executing chart queries.
+
+### `charts create --board-id <boardId> [options]`
+Create a chart from typed flags or a raw JSON body.
+
+```bash
+formo charts create --board-id brd_123 --title "Daily Active Users" \
+  --chart-type line \
+  --query "SELECT toDate(timestamp) AS date, countDistinct(address) AS users FROM events GROUP BY date ORDER BY date" \
+  --x-axis date --y-axis users
+
+formo charts create --board-id brd_123 --body '{"title":"Recent Events","chart_type":"table","query":"SELECT * FROM events LIMIT 10"}'
+```
 
 ### `charts update <chartId> --board-id <boardId> --body '<json>'`
 Update a chart.
+
+### `charts query <chartId> --board-id <boardId> --date-from <YYYY-MM-DD> --date-to <YYYY-MM-DD>`
+Execute a saved chart that uses `{{date_from}}` / `{{date_to}}` variables.
+
+### `charts move|duplicate|reorder`
+Move a chart to another board, duplicate a chart, or reorder charts in a board.
 
 ### `charts delete <chartId> --board-id <boardId>`
 Delete a chart.
@@ -251,6 +298,12 @@ Smart contract commands. Requires `contracts:read` / `contracts:write`.
 ### `contracts list`
 List all tracked contracts. Returns `{ data: Contract[], deploy: { last_deployed_at, diff }, total, page, size, has_more }`.
 
+### `contracts get <chain> <address>`
+Get a single tracked contract.
+
+### `contracts recommendations`
+List contracts the project already interacts with but has not added yet.
+
 ### `contracts create`
 
 | Option | Description |
@@ -258,13 +311,15 @@ List all tracked contracts. Returns `{ data: Contract[], deploy: { last_deployed
 | `--address` | Contract address (`0x…`) |
 | `--chain` | Chain ID (e.g. `1`, `137`) |
 | `--name` | Human-readable contract name |
-| `--abi` | Contract ABI as a JSON string |
-| `--events` | Events configuration as a JSON string |
+| `--abi` | Contract ABI as a JSON string; sent stringified to the API |
+| `--events` | JSON array of ABI event objects to monitor |
+| `--start-block` | Optional start block |
+| `--include-in-pipeline` | Include this contract in the Goldsky events pipeline (`true` by default in the API) |
 
 ```bash
 formo contracts create --address 0x1f9840a85d5af5bf1d1762f925bdaddc4201f984 --chain 1 \
   --name "UNI Token" --abi '[{"type":"event","name":"Transfer","inputs":[]}]' \
-  --events '{"Transfer":true}'
+  --events '[{"type":"event","name":"Transfer","inputs":[]}]'
 ```
 
 ### `contracts update <chain> <address>`
@@ -273,7 +328,12 @@ formo contracts create --address 0x1f9840a85d5af5bf1d1762f925bdaddc4201f984 --ch
 |---|---|
 | `--name` | Updated contract name |
 | `--abi` | Updated ABI |
-| `--events` | Updated events config |
+| `--events` | Updated JSON array of ABI event objects |
+| `--start-block` | Optional start block |
+| `--include-in-pipeline` | Include or exclude this contract from the Goldsky events pipeline |
+
+### `contracts pipeline <chain> <address> --include-in-pipeline <true|false>`
+Toggle pipeline inclusion without re-sending the full ABI/events payload.
 
 ### `contracts delete <chain> <address>`
 Remove a tracked contract.
@@ -348,10 +408,24 @@ Bulk-import wallet addresses into the project via the events API.
 | Option | Description |
 |---|---|
 | `--addresses` | JSON array of wallet address strings |
-| `--write-key` | Project write SDK key |
+| `--rows` | JSON array of `{address,properties?}` objects |
 
 ```bash
-formo import wallets --addresses '["0xabc...","0xdef..."]' --write-key write_key_xyz
+formo import wallets --addresses '["0xabc...","0xdef..."]'
+formo import wallets --rows '[{"address":"0xabc...","properties":{"display_name":"Alice"}}]'
+```
+
+---
+
+## `formo events`
+
+### `events ingest`
+
+Send raw analytics events to `events.formo.so`. This command uses a project SDK write key, not the workspace API key.
+
+```bash
+export FORMO_WRITE_KEY=formo_write_key_xxx
+formo events ingest --event '{"type":"track","channel":"cli","version":"1","anonymous_id":"anon_123","event":"CLI Test","context":{},"properties":{},"original_timestamp":"2026-04-27T23:05:38.000Z","sent_at":"2026-04-27T23:05:42.000Z","message_id":"cli-test-1"}'
 ```
 
 ---
