@@ -1,0 +1,67 @@
+{
+  "filePath": "src/commands/import.ts",
+  "projectId": "cli",
+  "candidates": [
+    {
+      "vulnSlug": "insecure-crypto",
+      "lineNumbers": [
+        5,
+        38,
+        42,
+        43,
+        51
+      ],
+      "snippet": "\nexport const importCmd = Cli.create('import', {\n  description: 'Import commands — bulk import wallet addresses into your project',\n})\n",
+      "matchedPattern": "weak cipher algorithm"
+    }
+  ],
+  "lastScannedAt": "2026-05-18T13:27:55.909Z",
+  "lastScannedRunId": "20260518132755-84f586919cca3cc4",
+  "fileHash": "1a683012805a900dcab78406eabc625caed2dd6c92ebfc6097cff15cf7e04bf1",
+  "findings": [],
+  "analysisHistory": [
+    {
+      "runId": "20260518132805-a5fd1949eb744d8b",
+      "investigatedAt": "2026-05-18T13:30:11.755Z",
+      "durationMs": 29793.75,
+      "durationApiMs": 27449,
+      "agentType": "claude-agent-sdk",
+      "model": "claude-opus-4-7",
+      "modelConfig": {
+        "model": "claude-opus-4-7"
+      },
+      "agentSessionId": "73190721-9d83-413f-9748-88626d00f584",
+      "findingCount": 0,
+      "numTurns": 2,
+      "phase": "process",
+      "costUsd": 0.1443679375,
+      "usage": {
+        "inputTokens": 1.5,
+        "outputTokens": 2118.75,
+        "cacheReadInputTokens": 20086.5,
+        "cacheCreationInputTokens": 13015.75
+      },
+      "refusal": {
+        "refused": false,
+        "skipped": [],
+        "raw": "```json\n{\n  \"refused\": false,\n  \"reason\": null,\n  \"skipped\": []\n}\n```"
+      }
+    }
+  ],
+  "status": "analyzed",
+  "gitInfo": {
+    "recentCommitters": [
+      {
+        "name": "Yos Riady",
+        "email": "1084226+yosriady@users.noreply.github.com",
+        "date": "2026-05-03T18:51:58+07:00"
+      },
+      {
+        "name": "ngogiahuandev",
+        "email": "ngogiahuan23122003@gmail.com",
+        "date": "2026-04-10T09:27:41+07:00"
+      }
+    ],
+    "enrichedAt": "2026-05-18T13:30:11.872Z"
+  }
+}

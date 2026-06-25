@@ -1,0 +1,83 @@
+{
+  "filePath": "src/commands/analytics.ts",
+  "projectId": "cli",
+  "candidates": [
+    {
+      "vulnSlug": "insecure-crypto",
+      "lineNumbers": [
+        5,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        132,
+        136,
+        140,
+        147,
+        157,
+        161,
+        165
+      ],
+      "snippet": "\nexport const analytics = Cli.create('analytics', {\n  description:\n    'Pre-built analytics query commands — KPIs, funnels, retention, revenue, and top-N breakdowns',\n})",
+      "matchedPattern": "weak cipher algorithm"
+    }
+  ],
+  "lastScannedAt": "2026-05-18T13:27:55.909Z",
+  "lastScannedRunId": "20260518132755-84f586919cca3cc4",
+  "fileHash": "832edb114f624fdde553a726f5174ea166c39ef52618d4a40ff971681c7de6ec",
+  "findings": [],
+  "analysisHistory": [
+    {
+      "runId": "20260518132805-a5fd1949eb744d8b",
+      "investigatedAt": "2026-05-18T13:30:45.183Z",
+      "durationMs": 30415.8,
+      "durationApiMs": 28011,
+      "agentType": "claude-agent-sdk",
+      "model": "claude-opus-4-7",
+      "modelConfig": {
+        "model": "claude-opus-4-7"
+      },
+      "agentSessionId": "002e479b-3054-4173-85cd-120252954fd4",
+      "findingCount": 0,
+      "numTurns": 2.2,
+      "phase": "process",
+      "costUsd": 0.14245805000000003,
+      "usage": {
+        "inputTokens": 2,
+        "outputTokens": 1932.2,
+        "cacheReadInputTokens": 34973.6,
+        "cacheCreationInputTokens": 12265
+      },
+      "refusal": {
+        "refused": false,
+        "skipped": [],
+        "raw": "```json\n{\n  \"refused\": false,\n  \"reason\": null,\n  \"skipped\": []\n}\n```"
+      }
+    }
+  ],
+  "status": "analyzed",
+  "gitInfo": {
+    "recentCommitters": [
+      {
+        "name": "Yos Riady",
+        "email": "1084226+yosriady@users.noreply.github.com",
+        "date": "2026-05-18T17:16:09+07:00"
+      }
+    ],
+    "enrichedAt": "2026-05-18T13:30:45.271Z"
+  }
+}

@@ -90,6 +90,10 @@ describe('lib/client / parseApiError', function () {
 
     expect(err.code).to.equal('INVALID_VALIDATION_REQUEST');
     expect(err.details).to.deep.equal(details);
+    expect(err.message).to.include('Details: body.name: Required');
+    expect(err.message).to.include(
+      'body.conditions.0.operator: Expected one of: gt, lt, eq',
+    );
   });
 
   it('falls back to axios message when the body has no error envelope', function () {

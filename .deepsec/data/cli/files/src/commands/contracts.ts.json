@@ -1,0 +1,83 @@
+{
+  "filePath": "src/commands/contracts.ts",
+  "projectId": "cli",
+  "candidates": [
+    {
+      "vulnSlug": "insecure-crypto",
+      "lineNumbers": [
+        5,
+        17,
+        18,
+        66,
+        68,
+        69,
+        70,
+        71,
+        72,
+        83,
+        136,
+        138,
+        139,
+        142,
+        143,
+        144,
+        154,
+        174,
+        176,
+        177,
+        182
+      ],
+      "snippet": "\nexport const contracts = Cli.create('contracts', {\n  description: 'Smart contract commands — register, list, update, and remove tracked contracts',\n})\n",
+      "matchedPattern": "weak cipher algorithm"
+    }
+  ],
+  "lastScannedAt": "2026-05-18T13:27:55.909Z",
+  "lastScannedRunId": "20260518132755-84f586919cca3cc4",
+  "fileHash": "42a76fddcd0b2a7d33794bfdf78c8fa65db157fcc2405a66eb146528f8f64c53",
+  "findings": [],
+  "analysisHistory": [
+    {
+      "runId": "20260518132805-a5fd1949eb744d8b",
+      "investigatedAt": "2026-05-18T13:30:45.432Z",
+      "durationMs": 30415.8,
+      "durationApiMs": 28011,
+      "agentType": "claude-agent-sdk",
+      "model": "claude-opus-4-7",
+      "modelConfig": {
+        "model": "claude-opus-4-7"
+      },
+      "agentSessionId": "002e479b-3054-4173-85cd-120252954fd4",
+      "findingCount": 0,
+      "numTurns": 2.2,
+      "phase": "process",
+      "costUsd": 0.14245805000000003,
+      "usage": {
+        "inputTokens": 2,
+        "outputTokens": 1932.2,
+        "cacheReadInputTokens": 34973.6,
+        "cacheCreationInputTokens": 12265
+      },
+      "refusal": {
+        "refused": false,
+        "skipped": [],
+        "raw": "```json\n{\n  \"refused\": false,\n  \"reason\": null,\n  \"skipped\": []\n}\n```"
+      }
+    }
+  ],
+  "status": "analyzed",
+  "gitInfo": {
+    "recentCommitters": [
+      {
+        "name": "Yos Riady",
+        "email": "1084226+yosriady@users.noreply.github.com",
+        "date": "2026-05-03T18:51:58+07:00"
+      },
+      {
+        "name": "ngogiahuandev",
+        "email": "ngogiahuan23122003@gmail.com",
+        "date": "2026-04-10T09:27:41+07:00"
+      }
+    ],
+    "enrichedAt": "2026-05-18T13:30:45.508Z"
+  }
+}

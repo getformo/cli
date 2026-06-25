@@ -14,6 +14,8 @@ formo login <apiKey>
 
 Saves your key to `~/.config/formo/config.json`. The `FORMO_API_KEY` environment variable takes precedence if set.
 
+For local development, set `FORMO_API_BASE_URL` for the REST API host and `FORMO_EVENTS_BASE_URL` for event ingestion.
+
 ### Check authentication status
 
 ```bash
@@ -65,6 +67,7 @@ formo profiles search [options]
 | Option | Values | Description |
 |---|---|---|
 | `--address` | `string` | Filter to a specific wallet address |
+| `--search` | `string` | Free-text search across address and identity fields |
 | `--page` | `number` | Page number (1-indexed, default `1`) |
 | `--size` | `number` | Page size (default `100`, max `1000`) |
 | `--order-by` | see below | Field to sort by |
@@ -116,6 +119,28 @@ formo profiles search --order-by tx_count --order-dir desc --page 2 --size 20 --
 | `labels.` | `labels.coinbase.verified_account` |
 
 Combine multiple conditions with `--logic and` (default) or `--logic or`.
+
+---
+
+### Update profile properties
+
+```bash
+formo profiles update <address> --properties '{"display_name":"Alice","twitter":"alice"}'
+formo profiles properties batch --rows '[{"address":"0xabc...","display_name":"Alice"}]'
+```
+
+> Requires `profiles:write` scope.
+
+### Manage profile labels
+
+```bash
+formo profiles labels create <address> --tag-id vip --value tier-1
+formo profiles labels create <address> --tag-id tier --timestamp 2024-03-15T00:00:00.000Z --is-deleted
+formo profiles labels batch --labels '[{"address":"0xabc...","tag_id":"vip","value":"tier-1"}]'
+formo profiles labels delete <address> --tag-id vip
+```
+
+> Requires `profiles:write` scope.
 
 ---
 
@@ -219,7 +244,7 @@ formo alerts create --name <name> --trigger-type <type> [options]
 | Option | Description |
 |---|---|
 | `--name` | Alert name |
-| `--trigger-type` | Trigger type (e.g. `event`, `threshold`) |
+| `--trigger-type` | Trigger type: `event` or `user` |
 | `--trigger-filters` | JSON array of trigger filter objects (optional) |
 | `--recipient` | JSON array of recipient objects (optional) |
 | `--secret` | Webhook secret string (optional) |
@@ -232,9 +257,9 @@ formo alerts create --name <name> --trigger-type <type> [options]
 formo alerts create --name "High value tx" --trigger-type event
 
 # Create an alert with filters and recipients
-formo alerts create --name "Whale alert" --trigger-type threshold \
-  --trigger-filters '[{"field":"amount","op":"gt","value":100000}]' \
-  --recipient '["https://hooks.example.com/formo"]'
+formo alerts create --name "Whale alert" --trigger-type event \
+  --trigger-filters '[{"name":"revenue","operator":"greater_than","value":"100000"}]' \
+  --recipient '[{"type":"webhook","value":["https://hooks.example.com/formo"]}]'
 ```
 
 ### Update an alert
@@ -256,22 +281,28 @@ formo alerts delete <alertId>
 ### Toggle alert status
 
 ```bash
-formo alerts toggle <alertId> --status <active|paused>
+formo alerts toggle <alertId> --status <active|inactive>
 ```
 
 | Option | Values | Description |
 |---|---|---|
-| `--status` | `active`, `paused` | New alert status |
+| `--status` | `active`, `inactive` | New alert status |
 
 > Requires `alerts:write` scope.
 
 **Examples:**
 ```bash
-# Pause an alert
-formo alerts toggle alert_abc123 --status paused
+# Deactivate an alert
+formo alerts toggle alert_abc123 --status inactive
 
 # Re-activate an alert
 formo alerts toggle alert_abc123 --status active
+```
+
+### Test alert delivery
+
+```bash
+formo alerts test <alertId> --sample-event '{"event":"transaction","revenue":250}'
 ```
 
 ---
@@ -299,26 +330,27 @@ formo boards get <boardId>
 ### Create a board
 
 ```bash
-formo boards create --name <name> [--description <desc>]
+formo boards create --title <title> [--description <desc>] [--is-public]
 ```
 
 | Option | Description |
 |---|---|
-| `--name` | Board name |
+| `--title` | Board title |
 | `--description` | Board description (optional) |
+| `--is-public` | Whether the board is publicly viewable |
 
 > Requires `boards:write` scope.
 
 **Examples:**
 ```bash
-formo boards create --name "KPI Dashboard"
-formo boards create --name "Revenue Metrics" --description "Weekly revenue tracking"
+formo boards create --title "KPI Dashboard"
+formo boards create --title "Revenue Metrics" --description "Weekly revenue tracking"
 ```
 
 ### Update a board
 
 ```bash
-formo boards update <boardId> [--name <name>] [--description <desc>]
+formo boards update <boardId> [--title <title>] [--description <desc>] [--is-public]
 ```
 
 > Requires `boards:write` scope.
@@ -345,6 +377,14 @@ formo charts list --board-id <boardId>
 
 > Requires `boards:read` scope.
 
+### List chart metadata
+
+```bash
+formo charts meta --board-id <boardId>
+```
+
+> Requires `boards:read` scope.
+
 ### Get a single chart
 
 ```bash
@@ -356,20 +396,27 @@ formo charts get <chartId> --board-id <boardId>
 ### Create a chart
 
 ```bash
-formo charts create --board-id <boardId> --body '<json>'
+formo charts create --board-id <boardId> [--body '<json>' | typed chart options]
 ```
 
 | Option | Description |
 |---|---|
 | `--board-id` | Board ID to add the chart to |
 | `--body` | Full chart configuration as a JSON string |
+| `--title` | Chart title |
+| `--chart-type` | `table`, `number`, `funnel`, `bar`, `line`, `area`, `pie`, `stacked`, `user_paths`, `retention` |
+| `--query` | SQL query for SQL-backed charts |
+| `--x-axis` / `--y-axis` / `--group-by` | Chart encodings |
+| `--steps` / `--settings` | JSON for funnel/user-path/retention chart settings |
 
 > Requires `boards:write` scope.
 
 **Examples:**
 ```bash
 formo charts create --board-id board_abc123 \
-  --body '{"name":"Daily active users","chartType":"line"}'
+  --title "Daily active users" --chart-type line \
+  --query "SELECT toDate(timestamp) AS date, countDistinct(address) AS users FROM events GROUP BY date ORDER BY date" \
+  --x-axis date --y-axis users
 ```
 
 ### Update a chart
@@ -379,6 +426,15 @@ formo charts update <chartId> --board-id <boardId> --body '<json>'
 ```
 
 > Requires `boards:write` scope.
+
+### Query, move, duplicate, or reorder charts
+
+```bash
+formo charts query <chartId> --board-id <boardId> --date-from 2026-04-01 --date-to 2026-04-30
+formo charts move <chartId> --board-id <sourceBoardId> --target-board-id <targetBoardId>
+formo charts duplicate <chartId> --board-id <boardId>
+formo charts reorder --board-id <boardId> --chart-ids chart_a,chart_b,chart_c
+```
 
 ### Delete a chart
 
@@ -402,6 +458,24 @@ formo contracts list
 
 > Requires `contracts:read` scope.
 
+### Get a contract
+
+```bash
+formo contracts get <chain> <address>
+```
+
+> Requires `contracts:read` scope.
+
+### Get recommended contracts
+
+```bash
+formo contracts recommendations
+```
+
+Lists contracts the project already interacts with but has not added yet.
+
+> Requires `contracts:read` scope.
+
 ### Register a contract
 
 ```bash
@@ -414,7 +488,9 @@ formo contracts create --address <addr> --chain <chainId> --name <name> --abi '<
 | `--chain` | Chain ID (e.g. `1` for Ethereum, `137` for Polygon) |
 | `--name` | Human-readable contract name |
 | `--abi` | Contract ABI as a JSON string |
-| `--events` | Events configuration as a JSON string |
+| `--events` | JSON array of ABI event objects to monitor |
+| `--start-block` | Optional start block |
+| `--include-in-pipeline` | Include this contract in the Goldsky events pipeline |
 
 > Requires `contracts:write` scope.
 
@@ -425,7 +501,7 @@ formo contracts create \
   --chain 1 \
   --name "My Token" \
   --abi '[{"type":"event","name":"Transfer","inputs":[]}]' \
-  --events '{"Transfer":true}'
+  --events '[{"type":"event","name":"Transfer","inputs":[]}]'
 ```
 
 ### Update a contract
@@ -438,6 +514,16 @@ formo contracts update <chain> <address> --name <name> --abi '<json>' --events '
 |---|---|
 | `chain` | Chain ID |
 | `address` | Contract address (`0x…`) |
+
+> Requires `contracts:write` scope.
+
+### Toggle pipeline inclusion
+
+```bash
+formo contracts pipeline <chain> <address> --include-in-pipeline false
+```
+
+Use this when a contract should remain registered for ABI decoding but be excluded from pipeline deploys.
 
 > Requires `contracts:write` scope.
 
@@ -496,21 +582,35 @@ formo segments delete <segmentId>
 Bulk import wallet addresses into a project to track them. This creates identify events for each address.
 
 ```bash
-formo import wallets --addresses '<json>' --write-key <writeKey>
+formo import wallets --addresses '<json>'
+formo import wallets --rows '<json>'
 ```
 
 | Option | Description |
 |---|---|
 | `--addresses` | JSON array of wallet address strings to import |
-| `--write-key` | Project write SDK key |
+| `--rows` | JSON array of `{address,properties?}` objects |
 
 > Requires `profiles:write` scope. **Only available on Scale and Enterprise plans.**
 
 **Examples:**
 ```bash
 formo import wallets \
-  --addresses '["0xabc123…","0xdef456…"]' \
-  --write-key write_key_xxx
+  --addresses '["0xabc123…","0xdef456…"]'
+
+formo import wallets \
+  --rows '[{"address":"0xabc123…","properties":{"display_name":"Alice"}}]'
+```
+
+---
+
+## Raw Event Ingestion
+
+Send analytics events to `events.formo.so` with a project SDK write key.
+
+```bash
+export FORMO_WRITE_KEY=formo_write_key_xxx
+formo events ingest --event '{"type":"track","channel":"cli","version":"1","anonymous_id":"anon_123","event":"CLI Test","context":{},"properties":{},"original_timestamp":"2026-04-27T23:05:38.000Z","sent_at":"2026-04-27T23:05:42.000Z","message_id":"cli-test-1"}'
 ```
 
 ---

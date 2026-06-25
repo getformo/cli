@@ -1,0 +1,27 @@
+{
+  "runId": "20260518132805-a5fd1949eb744d8b",
+  "projectId": "cli",
+  "rootPath": "/Users/yos/cli",
+  "createdAt": "2026-05-18T13:28:05.587Z",
+  "type": "process",
+  "phase": "done",
+  "pid": 94587,
+  "hostname": "Mac.lan",
+  "processorConfig": {
+    "agentType": "claude-agent-sdk",
+    "model": "claude-opus-4-7",
+    "modelConfig": {
+      "model": "claude-opus-4-7"
+    },
+    "invocationMode": "scan"
+  },
+  "stats": {
+    "filesProcessed": 16,
+    "findingsCount": 4,
+    "totalCostUsd": 2.88212875,
+    "totalInputTokens": 36,
+    "totalOutputTokens": 46401,
+    "totalDurationMs": 684144
+  },
+  "completedAt": "2026-05-18T13:32:16.571Z"
+}

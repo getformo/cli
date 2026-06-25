@@ -1,0 +1,82 @@
+{
+  "filePath": "src/lib/config.ts",
+  "projectId": "cli",
+  "candidates": [
+    {
+      "vulnSlug": "env-var-as-bool",
+      "lineNumbers": [
+        45
+      ],
+      "snippet": "\nexport function getApiKey(): string | undefined {\n  return process.env.FORMO_API_KEY ?? readConfig().apiKey;\n}\n",
+      "matchedPattern": "Secret env var used as boolean"
+    },
+    {
+      "vulnSlug": "process-env-access",
+      "lineNumbers": [
+        45
+      ],
+      "snippet": "export function getApiKey(): string | undefined {\n  return process.env.FORMO_API_KEY ?? readConfig().apiKey;\n}",
+      "matchedPattern": "process.env.FORMO_API_KEY"
+    }
+  ],
+  "lastScannedAt": "2026-05-18T13:27:55.926Z",
+  "lastScannedRunId": "20260518132755-84f586919cca3cc4",
+  "fileHash": "53491b1a4f44acbe9eecf879747f6557c38f0e5e76f83fd4d25d865c55f9fb5e",
+  "findings": [
+    {
+      "severity": "MEDIUM",
+      "vulnSlug": "other-insecure-file-permissions",
+      "title": "API-key config file permission control (0o600) silently bypassed when config.json already exists",
+      "description": "saveConfig() persists the plaintext API key with `fs.writeFileSync(CONFIG_FILE, ..., { mode: 0o600 })` and creates the directory with `fs.mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 })`. Per Node.js semantics, the `mode` option of `writeFileSync` is applied ONLY when the file is newly created (open with O_CREAT). If `~/.config/formo/config.json` already exists, the mode is NOT re-applied — the file is merely truncated and rewritten while retaining its existing permissions. Likewise, `mkdirSync` does not chmod an already-existing CONFIG_DIR. The codebase's documented threat model ranks 'API-key disclosure via weak config-file perms' as the #1 impact, and the sole stated control for the plaintext-credential store is exactly this `0o600`/`0o700` mode. That control is conditional: it holds only for a clean first creation. Realistic ways the file pre-exists with looser (e.g., 0o644, group/world-readable) permissions before saveConfig runs include: (a) an older `@formo/cli` version that wrote config.json without the `mode` option (default 0o666 & ~umask → typically 0o644); (b) the user or another tool creating the file first; (c) a backup/restore or dotfile-sync tool resetting modes; (d) `EXISTING` config dir created by another app under `~/.config`. In any of these cases `formo login` writes a long-lived `formo_…` API key into a world/group-readable file on a multi-user host, disclosing the credential to other local users — the precise risk the 0o600 control was meant to prevent. clearConfig() (L35-37) has the same create-only-mode limitation (lower impact since it writes `{}`).",
+      "lineNumbers": [
+        26,
+        27,
+        28,
+        29
+      ],
+      "recommendation": "Do not rely on writeFileSync's create-only `mode`. After writing, explicitly enforce permissions: `fs.chmodSync(CONFIG_FILE, 0o600)` (and `fs.chmodSync(CONFIG_DIR, 0o700)`), or write atomically via `fs.openSync(CONFIG_FILE, 'w', 0o600)` followed by `fs.fchmodSync(fd, 0o600)` before writing, then rename. Optionally detect and warn (or refuse) if the existing file/dir has group/other bits set. Apply the same chmod hardening in clearConfig().",
+      "confidence": "medium",
+      "producedByRunId": "20260518132805-a5fd1949eb744d8b"
+    }
+  ],
+  "analysisHistory": [
+    {
+      "runId": "20260518132805-a5fd1949eb744d8b",
+      "investigatedAt": "2026-05-18T13:31:02.829Z",
+      "durationMs": 42587,
+      "durationApiMs": 39632,
+      "agentType": "claude-agent-sdk",
+      "model": "claude-opus-4-7",
+      "modelConfig": {
+        "model": "claude-opus-4-7"
+      },
+      "agentSessionId": "8b108fcb-9c4d-457d-a3e3-cea3f3a470cf",
+      "findingCount": 1,
+      "numTurns": 2.25,
+      "phase": "process",
+      "costUsd": 0.17684918750000003,
+      "usage": {
+        "inputTokens": 3,
+        "outputTokens": 2741.25,
+        "cacheReadInputTokens": 53677.75,
+        "cacheCreationInputTokens": 13034.25
+      },
+      "refusal": {
+        "refused": false,
+        "skipped": [],
+        "raw": "```json\n{\"refused\": false, \"reason\": null, \"skipped\": []}\n```"
+      }
+    }
+  ],
+  "status": "analyzed",
+  "gitInfo": {
+    "recentCommitters": [
+      {
+        "name": "ngogiahuandev",
+        "email": "ngogiahuan23122003@gmail.com",
+        "date": "2026-04-10T09:27:41+07:00"
+      }
+    ],
+    "enrichedAt": "2026-05-18T13:31:02.913Z"
+  }
+}

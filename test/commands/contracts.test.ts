@@ -6,7 +6,7 @@ import { requiresLiveApi } from '../helpers/liveApi';
 // (bare resource — no envelope).
 
 const TEST_ABI = JSON.stringify([{ type: 'event', name: 'Transfer', inputs: [] }]);
-const TEST_EVENTS = JSON.stringify({ Transfer: true });
+const TEST_EVENTS = JSON.stringify([{ type: 'event', name: 'Transfer', inputs: [] }]);
 
 describe('commands/contracts', function () {
   describe('listContractsRun()', function () {

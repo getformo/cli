@@ -1,15 +1,100 @@
 import { Cli, z } from 'incur'
 import { createClient, requireApiKey } from '../lib/client'
+import {
+  parseJsonArrayOfObjects,
+  parseJsonObject,
+} from '../lib/json'
 
 export const profiles = Cli.create('profiles', {
   description: 'Wallet profile commands',
 })
 
-export function getProfileRun(address: string, expand?: string) {
+export interface LifecycleThresholdOptions {
+  newWindowDays?: number
+  churnWindowDays?: number
+  powerUserMinActiveDays?: number
+  powerUserWindowDays?: number
+  resurrectedGapDays?: number
+  atRiskMinDaysInactive?: number
+  atRiskPriorActiveDaysThreshold?: number
+}
+
+export interface GetProfileOptions extends LifecycleThresholdOptions {
+  expand?: string
+}
+
+function addLifecycleThresholdParams(
+  params: Record<string, string | number>,
+  options: LifecycleThresholdOptions,
+) {
+  if (options.newWindowDays !== undefined) {
+    params.new_window_days = options.newWindowDays
+  }
+  if (options.churnWindowDays !== undefined) {
+    params.churn_window_days = options.churnWindowDays
+  }
+  if (options.powerUserMinActiveDays !== undefined) {
+    params.power_user_min_active_days = options.powerUserMinActiveDays
+  }
+  if (options.powerUserWindowDays !== undefined) {
+    params.power_user_window_days = options.powerUserWindowDays
+  }
+  if (options.resurrectedGapDays !== undefined) {
+    params.resurrected_gap_days = options.resurrectedGapDays
+  }
+  if (options.atRiskMinDaysInactive !== undefined) {
+    params.at_risk_min_days_inactive = options.atRiskMinDaysInactive
+  }
+  if (options.atRiskPriorActiveDaysThreshold !== undefined) {
+    params.at_risk_prior_active_days_threshold =
+      options.atRiskPriorActiveDaysThreshold
+  }
+}
+
+const lifecycleThresholdOptions = {
+  newWindowDays: z.coerce
+    .number()
+    .optional()
+    .describe('Override lifecycle new-user window in days'),
+  churnWindowDays: z.coerce
+    .number()
+    .optional()
+    .describe('Override lifecycle churn window in days'),
+  powerUserMinActiveDays: z.coerce
+    .number()
+    .optional()
+    .describe('Override lifecycle power-user minimum active days'),
+  powerUserWindowDays: z.coerce
+    .number()
+    .optional()
+    .describe('Override lifecycle power-user window in days'),
+  resurrectedGapDays: z.coerce
+    .number()
+    .optional()
+    .describe('Override lifecycle resurrected gap in days'),
+  atRiskMinDaysInactive: z.coerce
+    .number()
+    .optional()
+    .describe('Override lifecycle at-risk minimum inactive days'),
+  atRiskPriorActiveDaysThreshold: z.coerce
+    .number()
+    .optional()
+    .describe('Override lifecycle at-risk prior active days threshold'),
+}
+
+export function getProfileRun(
+  address: string,
+  optionsOrExpand: GetProfileOptions | string = {},
+) {
   requireApiKey()
   const client = createClient()
-  const params: Record<string, string> = {}
-  if (expand) params.expand = expand
+  const options =
+    typeof optionsOrExpand === 'string'
+      ? { expand: optionsOrExpand }
+      : optionsOrExpand
+  const params: Record<string, string | number> = {}
+  if (options.expand) params.expand = options.expand
+  addLifecycleThresholdParams(params, options)
   return client.get(`/v0/profiles/${encodeURIComponent(address)}`, { params })
 }
 
@@ -23,6 +108,7 @@ profiles.command('get', {
       .string()
       .optional()
       .describe('Comma-separated list of fields to expand: apps,chains,tokens,labels'),
+    ...lifecycleThresholdOptions,
   }),
   examples: [
     { args: { address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045' }, description: 'Get a wallet profile' },
@@ -34,12 +120,13 @@ profiles.command('get', {
   ],
   hint: 'Requires profiles:read scope on your API key.',
   run({ args, options }) {
-    return getProfileRun(args.address, options.expand)
+    return getProfileRun(args.address, options)
   },
 })
 
-export interface SearchProfilesOptions {
+export interface SearchProfilesOptions extends LifecycleThresholdOptions {
   address?: string
+  search?: string
   page?: number
   size?: number
   orderBy?: string
@@ -107,11 +194,13 @@ export function searchProfilesRun(options: SearchProfilesOptions) {
 
   const params: Record<string, string | number> = {}
   if (options.address) params.address = options.address
+  if (options.search) params.search = options.search
   if (options.page !== undefined) params.page = options.page
   if (options.size !== undefined) params.size = options.size
   if (options.orderBy) params.order_by = options.orderBy
   if (options.orderDir) params.order_dir = options.orderDir
   if (options.expand) params.expand = options.expand
+  addLifecycleThresholdParams(params, options)
 
   let body: object | undefined
   if (options.conditions) {
@@ -134,6 +223,7 @@ profiles.command('search', {
   description: 'Search wallet profiles with optional filters',
   options: z.object({
     address: z.string().optional().describe('Filter by wallet address'),
+    search: z.string().optional().describe('Free-text search across address and identity fields'),
     page: z.coerce.number().optional().describe('Page number (1-indexed, default 1)'),
     size: z.coerce.number().optional().describe('Page size (default 100, max 1000)'),
     orderBy: z
@@ -172,6 +262,7 @@ profiles.command('search', {
       .enum(['and', 'or'])
       .optional()
       .describe('Logic operator for combining conditions: "and" (default) or "or"'),
+    ...lifecycleThresholdOptions,
   }),
   examples: [
     { options: { size: 10 }, description: 'List first 10 profiles' },
@@ -220,14 +311,7 @@ export interface UpdateProfileOptions {
 }
 
 export function buildUpdateProfileBody(options: UpdateProfileOptions) {
-  let body: Record<string, unknown>
-  try {
-    body = JSON.parse(options.properties)
-    if (!body || typeof body !== 'object' || Array.isArray(body))
-      throw new Error('not an object')
-  } catch {
-    throw new Error('--properties must be a JSON object of property keys')
-  }
+  const body = parseJsonObject(options.properties, '--properties')
   if (Object.keys(body).length === 0) {
     throw new Error('--properties must contain at least one key')
   }
@@ -278,6 +362,63 @@ profiles.command('update', {
   },
 })
 
+// ── Batch update profile properties ──
+
+export interface BatchUpdateProfilesOptions {
+  rows: string
+}
+
+export function buildBatchUpdateProfilesBody(
+  options: BatchUpdateProfilesOptions,
+) {
+  const rows = parseJsonArrayOfObjects(options.rows, '--rows')
+  if (rows.length === 0) {
+    throw new Error('--rows must contain at least one item')
+  }
+  for (const row of rows) {
+    if (typeof row.address !== 'string' || row.address.length === 0) {
+      throw new Error('--rows entries must each include a non-empty string address')
+    }
+  }
+  return rows
+}
+
+export function batchUpdateProfilesRun(options: BatchUpdateProfilesOptions) {
+  requireApiKey()
+  const client = createClient()
+  return client.post(
+    '/v0/profiles/properties',
+    buildBatchUpdateProfilesBody(options),
+  )
+}
+
+export const profilesProperties = Cli.create('properties', {
+  description: 'Manage first-party profile properties in bulk',
+})
+
+profilesProperties.command('batch', {
+  description: 'Batch update first-party profile properties for up to 100 wallets',
+  options: z.object({
+    rows: z
+      .string()
+      .describe(
+        'JSON array of flat {address,...properties} objects. ENS names are not resolved in batch requests.',
+      ),
+  }),
+  examples: [
+    {
+      options: {
+        rows: '[{"address":"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045","display_name":"alice.eth","email":"alice@example.com"}]',
+      },
+      description: 'Batch set display names and emails',
+    },
+  ],
+  hint: 'Requires profiles:write scope on your API key. Unknown keys are ignored by the API; invalid rows are quarantined.',
+  run({ options }) {
+    return batchUpdateProfilesRun(options)
+  },
+})
+
 // ── Labels sub-resource ──
 
 export const profilesLabels = Cli.create('labels', {
@@ -290,6 +431,8 @@ export interface CreateProfileLabelOptions {
   tagId?: string
   value?: string
   chainId?: string
+  timestamp?: string
+  isDeleted?: boolean
   labels?: string
 }
 
@@ -305,9 +448,13 @@ export function buildCreateLabelBody(options: CreateProfileLabelOptions): unknow
     }
   }
   if (options.tagId) {
-    const single: Record<string, string> = { tag_id: options.tagId }
-    if (options.value) single.value = options.value
+    const single: Record<string, string | number> = { tag_id: options.tagId }
+    if (options.value !== undefined) single.value = options.value
     if (options.chainId) single.chain_id = options.chainId
+    if (options.timestamp) single.timestamp = options.timestamp
+    if (options.isDeleted !== undefined) {
+      single._is_deleted = options.isDeleted ? 1 : 0
+    }
     return single
   }
   throw new Error('Provide --tag-id (single label) or --labels (batch JSON array)')
@@ -337,10 +484,18 @@ profilesLabels.command('create', {
       .describe('Label identifier (e.g. "vip", "airdrop_eligible")'),
     value: z.string().optional().describe('Optional label value (e.g. tier name, country code)'),
     chainId: z.string().optional().describe('Optional chain identifier the label applies to'),
+    timestamp: z
+      .string()
+      .optional()
+      .describe('Optional historical ISO-8601 timestamp for the label row'),
+    isDeleted: z
+      .boolean()
+      .optional()
+      .describe('Set true with --timestamp to backfill a label removal tombstone'),
     labels: z
       .string()
       .optional()
-      .describe('JSON array of UserLabelInput objects for batch upsert'),
+      .describe('JSON array of UserLabelInput objects for this wallet'),
   }),
   examples: [
     {
@@ -355,6 +510,11 @@ profilesLabels.command('create', {
     },
     {
       args: { address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045' },
+      options: { tagId: 'tier', timestamp: '2024-03-15T00:00:00.000Z', isDeleted: true },
+      description: 'Backfill a historical label removal',
+    },
+    {
+      args: { address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045' },
       options: { labels: '[{"tag_id":"vip"},{"tag_id":"airdrop_eligible","chain_id":"1"}]' },
       description: 'Apply multiple labels in one call',
     },
@@ -362,6 +522,64 @@ profilesLabels.command('create', {
   hint: 'Requires profiles:write scope on your API key.',
   run({ args, options }) {
     return createProfileLabelRun(args.address, options)
+  },
+})
+
+// ── Batch upsert labels across wallets ──
+
+export interface BatchCreateProfileLabelsOptions {
+  labels: string
+}
+
+export function buildBatchCreateLabelsBody(
+  options: BatchCreateProfileLabelsOptions,
+) {
+  const labels = parseJsonArrayOfObjects(options.labels, '--labels')
+  if (labels.length === 0) {
+    throw new Error('--labels must contain at least one item')
+  }
+  for (const label of labels) {
+    if (typeof label.address !== 'string' || label.address.length === 0) {
+      throw new Error('--labels entries must each include a non-empty string address')
+    }
+    if (typeof label.tag_id !== 'string' || label.tag_id.length === 0) {
+      throw new Error('--labels entries must each include a non-empty string tag_id')
+    }
+  }
+  return labels
+}
+
+export function batchCreateProfileLabelsRun(
+  options: BatchCreateProfileLabelsOptions,
+) {
+  requireApiKey()
+  const client = createClient()
+  return client.post(
+    '/v0/profiles/labels',
+    buildBatchCreateLabelsBody(options),
+  )
+}
+
+profilesLabels.command('batch', {
+  description: 'Batch upsert labels across up to 100 wallets',
+  options: z.object({
+    labels: z
+      .string()
+      .describe(
+        'JSON array of {address,tag_id,value?,chain_id?,timestamp?,_is_deleted?} objects',
+      ),
+  }),
+  examples: [
+    {
+      options: {
+        labels: '[{"address":"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045","tag_id":"vip","value":"tier-1"}]',
+      },
+      description: 'Batch upsert labels for multiple wallets',
+    },
+  ],
+  hint: 'Requires profiles:write scope on your API key. ENS names are not resolved in batch requests.',
+  run({ options }) {
+    return batchCreateProfileLabelsRun(options)
   },
 })
 
@@ -420,4 +638,5 @@ profilesLabels.command('delete', {
   },
 })
 
+profiles.command(profilesProperties)
 profiles.command(profilesLabels)

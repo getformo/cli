@@ -1,0 +1,123 @@
+{
+  "filePath": "src/index.ts",
+  "projectId": "cli",
+  "candidates": [
+    {
+      "vulnSlug": "insecure-crypto",
+      "lineNumbers": [
+        74,
+        83,
+        98,
+        100,
+        103,
+        191,
+        237
+      ],
+      "snippet": "const cli = Cli.create(\"formo\", {\n  version: \"0.2.0\",\n  description: \"Formo API CLI — Web3 analytics from the terminal\",\n  sync: {\n    suggestions: [",
+      "matchedPattern": "weak cipher algorithm"
+    },
+    {
+      "vulnSlug": "secret-in-log",
+      "lineNumbers": [
+        55
+      ],
+      "snippet": "      headers: { \"Content-Type\": \"application/json\" },\n      body: JSON.stringify({ apiKey }),\n    });",
+      "matchedPattern": "Secret variable in log statement"
+    },
+    {
+      "vulnSlug": "secret-in-log",
+      "lineNumbers": [
+        103
+      ],
+      "snippet": "  options: z.object({}),\n  examples: [{ args: { apiKey: \"formo_abc123\" }, description: \"Save API key\" }],\n  async run({ args }) {",
+      "matchedPattern": "Secret variable in log statement"
+    },
+    {
+      "vulnSlug": "env-var-as-bool",
+      "lineNumbers": [
+        211,
+        229
+      ],
+      "snippet": "      }\n\n      if (process.env.FORMO_API_KEY) {\n        process.stderr.write(\n          \"\\n\" +",
+      "matchedPattern": "Secret env var used as boolean"
+    },
+    {
+      "vulnSlug": "process-env-access",
+      "lineNumbers": [
+        211
+      ],
+      "snippet": "\n      if (process.env.FORMO_API_KEY) {\n        process.stderr.write(",
+      "matchedPattern": "process.env.FORMO_API_KEY"
+    },
+    {
+      "vulnSlug": "process-env-access",
+      "lineNumbers": [
+        229
+      ],
+      "snippet": "      message: hadKey ? \"API key removed\" : \"Already logged out\",\n      envVarSet: !!process.env.FORMO_API_KEY,\n    };",
+      "matchedPattern": "process.env.FORMO_API_KEY"
+    },
+    {
+      "vulnSlug": "process-env-access",
+      "lineNumbers": [
+        241
+      ],
+      "snippet": "    const config = readConfig();\n    const source = process.env.FORMO_API_KEY\n      ? \"FORMO_API_KEY env var\"",
+      "matchedPattern": "process.env.FORMO_API_KEY"
+    }
+  ],
+  "lastScannedAt": "2026-05-18T13:27:55.926Z",
+  "lastScannedRunId": "20260518132755-84f586919cca3cc4",
+  "fileHash": "fb198565b33e222909f3b54cd9105055359085d9f16d78ddb7fb9eead4a3d006",
+  "findings": [],
+  "analysisHistory": [
+    {
+      "runId": "20260518132805-a5fd1949eb744d8b",
+      "investigatedAt": "2026-05-18T13:32:16.245Z",
+      "durationMs": 80847.33333333333,
+      "durationApiMs": 77802,
+      "agentType": "claude-agent-sdk",
+      "model": "claude-opus-4-7",
+      "modelConfig": {
+        "model": "claude-opus-4-7"
+      },
+      "agentSessionId": "2987151b-22c8-4aa8-97b4-670c195142f6",
+      "findingCount": 0,
+      "numTurns": 2.3333333333333335,
+      "phase": "process",
+      "costUsd": 0.29499000000000003,
+      "usage": {
+        "inputTokens": 2.6666666666666665,
+        "outputTokens": 5766.666666666667,
+        "cacheReadInputTokens": 45820,
+        "cacheCreationInputTokens": 20464
+      },
+      "refusal": {
+        "refused": false,
+        "skipped": [],
+        "raw": "```json\n{\"refused\": false, \"reason\": null, \"skipped\": []}\n```"
+      }
+    }
+  ],
+  "status": "analyzed",
+  "gitInfo": {
+    "recentCommitters": [
+      {
+        "name": "Yos Riady",
+        "email": "1084226+yosriady@users.noreply.github.com",
+        "date": "2026-05-18T17:16:09+07:00"
+      },
+      {
+        "name": "Yos Riady",
+        "email": "yos@formo.so",
+        "date": "2026-05-02T12:08:36+07:00"
+      },
+      {
+        "name": "ngogiahuandev",
+        "email": "ngogiahuan23122003@gmail.com",
+        "date": "2026-04-10T11:11:00+07:00"
+      }
+    ],
+    "enrichedAt": "2026-05-18T13:32:16.392Z"
+  }
+}

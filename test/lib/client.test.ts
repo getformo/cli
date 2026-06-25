@@ -2,7 +2,20 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { expect } from 'chai';
-import { createClient, requireApiKey } from '../../src/lib/client';
+import {
+  createClient,
+  getApiBaseUrl,
+  getEventsBaseUrl,
+  requireApiKey,
+} from '../../src/lib/client';
+
+function restoreEnv(name: string, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[name];
+  } else {
+    process.env[name] = value;
+  }
+}
 
 describe('lib/client', function () {
   describe('requireApiKey()', function () {
@@ -40,8 +53,26 @@ describe('lib/client', function () {
     });
 
     it('uses https://api.formo.so as base URL', function () {
+      const saved = process.env.FORMO_API_BASE_URL;
+      delete process.env.FORMO_API_BASE_URL;
       const client = createClient();
       expect(client.defaults.baseURL).to.equal('https://api.formo.so');
+      restoreEnv('FORMO_API_BASE_URL', saved);
+    });
+
+    it('uses FORMO_API_BASE_URL when set', function () {
+      const saved = process.env.FORMO_API_BASE_URL;
+      process.env.FORMO_API_BASE_URL = 'http://localhost:3001';
+      expect(getApiBaseUrl()).to.equal('http://localhost:3001');
+      expect(createClient().defaults.baseURL).to.equal('http://localhost:3001');
+      restoreEnv('FORMO_API_BASE_URL', saved);
+    });
+
+    it('uses FORMO_EVENTS_BASE_URL when set', function () {
+      const saved = process.env.FORMO_EVENTS_BASE_URL;
+      process.env.FORMO_EVENTS_BASE_URL = 'http://localhost:3002';
+      expect(getEventsBaseUrl()).to.equal('http://localhost:3002');
+      restoreEnv('FORMO_EVENTS_BASE_URL', saved);
     });
 
     it('sets a 30 second timeout', function () {

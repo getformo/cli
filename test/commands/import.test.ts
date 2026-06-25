@@ -7,7 +7,6 @@ describe('commands/import', function () {
       expect(() =>
         importWalletsRun({
           addresses: 'not-json',
-          writeKey: 'write_key_test',
         }),
       ).to.throw(/addresses/);
     });
@@ -16,7 +15,6 @@ describe('commands/import', function () {
       expect(() =>
         importWalletsRun({
           addresses: '"just-a-string"',
-          writeKey: 'write_key_test',
         }),
       ).to.throw(/addresses/);
     });
@@ -25,21 +23,26 @@ describe('commands/import', function () {
       expect(() =>
         importWalletsRun({
           addresses: '{"address":"0xabc"}',
-          writeKey: 'write_key_test',
         }),
       ).to.throw(/addresses/);
+    });
+
+    it('throws when rows entries do not include an address', function () {
+      expect(() =>
+        importWalletsRun({
+          rows: '[{"properties":{"display_name":"Alice"}}]',
+        }),
+      ).to.throw(/address/);
     });
   });
 
   describe('importWalletsRun() — API call', function () {
-    it('imports wallets when WRITE_KEY is provided', async function () {
-      const writeKey = process.env.TEST_WRITE_KEY;
-      if (!writeKey) {
-        this.skip(); // Set TEST_WRITE_KEY in .env to run this test
+    it('imports wallets when explicitly enabled', async function () {
+      if (process.env.TEST_IMPORT_WALLETS !== '1') {
+        this.skip(); // Set TEST_IMPORT_WALLETS=1 to run this plan-gated mutation
       }
       const result = await importWalletsRun({
         addresses: JSON.stringify(['0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045']),
-        writeKey,
       }) as unknown;
       expect(result).to.exist;
     });

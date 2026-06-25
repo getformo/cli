@@ -1,5 +1,7 @@
 import { expect } from 'chai';
 import {
+  batchCreateProfileLabelsRun,
+  batchUpdateProfilesRun,
   createProfileLabelRun,
   deleteProfileLabelRun,
   getProfileRun,
@@ -92,6 +94,30 @@ describe('commands/profiles', function () {
       expect(() =>
         createProfileLabelRun(KNOWN_ADDRESS, { labels: '[]' }),
       ).to.throw(/labels/);
+    });
+  });
+
+  describe('batchUpdateProfilesRun() — local validation', function () {
+    it('throws on invalid rows JSON', function () {
+      expect(() => batchUpdateProfilesRun({ rows: 'not-json' })).to.throw(/rows/);
+    });
+
+    it('throws when a row is missing address', function () {
+      expect(() =>
+        batchUpdateProfilesRun({ rows: '[{"display_name":"Alice"}]' }),
+      ).to.throw(/address/);
+    });
+  });
+
+  describe('batchCreateProfileLabelsRun() — local validation', function () {
+    it('throws on invalid labels JSON', function () {
+      expect(() => batchCreateProfileLabelsRun({ labels: 'not-json' })).to.throw(/labels/);
+    });
+
+    it('throws when a row is missing tag_id', function () {
+      expect(() =>
+        batchCreateProfileLabelsRun({ labels: '[{"address":"0xabc"}]' }),
+      ).to.throw(/tag_id/);
     });
   });
 
