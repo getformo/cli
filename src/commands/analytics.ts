@@ -13,7 +13,7 @@ export const analytics = Cli.create('analytics', {
 const PIPES: Array<{ name: string; description: string }> = [
   { name: 'kpis', description: 'Traffic KPIs: visitors, pageviews, bounce rate, session duration' },
   { name: 'event_timeseries', description: 'Event counts over time' },
-  { name: 'funnel', description: 'Conversion funnel across ordered steps. --params: steps (JSON array of {type,event,name,filters?}), window_seconds, funnel_type, breakdown' },
+  { name: 'funnel', description: 'Conversion funnel across ordered steps. --params: steps (JSON array of {type,event,name,filters?}), window_seconds, funnel_type, group_by, limit, attribution' },
   { name: 'flow', description: 'User path/flow analysis. --params: start_step / end_step (JSON {type,event,...}), global_filters, window_seconds, max_steps' },
   { name: 'frequency', description: 'Engagement frequency distribution' },
   { name: 'lifecycle', description: 'User lifecycle stages (new, returning, power, resurrected, churned)' },
