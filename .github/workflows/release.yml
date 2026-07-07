@@ -5,15 +5,16 @@ on:
     tags:
       - 'v*'
 
-permissions:
-  id-token: write  # Required for OIDC trusted publishing
-  contents: write  # Required for creating GitHub releases
+permissions: {}
 
 jobs:
   publish:
     # npm provenance publishing only supports GitHub-hosted Actions runners.
     # Keep this job on ubuntu-latest unless npm adds self-hosted provenance support.
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # Required for OIDC trusted publishing
     # Workflow-context values are bound to env here and referenced as
     # shell variables ($TAG/$REPO/$COMMIT_SHA) in run: blocks instead of
     # `${{ }}` interpolation, so an attacker-controlled tag name cannot be
