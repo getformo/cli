@@ -27,9 +27,9 @@ Canonical endpoints and packages:
 
 - Use MCP OAuth when the host supports custom-connector OAuth.
 - Otherwise use a project-scoped workspace API key as `Authorization: Bearer <key>` for MCP, CLI, and REST.
-- Set `FORMO_API_KEY` or run `formo login <apiKey>` for the CLI.
-- Use a project SDK write key in `FORMO_WRITE_KEY` only for raw event ingestion.
-- Request only the scopes required by the task. Analytics and SQL need `query:read`; resource management uses the matching `*:read` or `*:write` scope.
+- Run `formo login <apiKey>` to save a CLI credential, or use the CLI's documented environment-based authentication for ephemeral sessions.
+- Use a project SDK write key, not a workspace API key, for raw event ingestion.
+- Request only the scopes required by the task. Analytics and SQL need `query:read`; charts use `boards:read` or `boards:write`; other resources use the matching `*:read` or `*:write` scope.
 - Never print, commit, log, or repeat credentials. Mask keys in status output and examples.
 - Treat the project bound to the credential as authoritative. Do not inject or guess another `project_id`.
 
@@ -100,7 +100,7 @@ formo <group> --help
 formo <group> <command> --help
 ```
 
-Read operations may proceed when the user asks for inspection or analysis. Create, update, delete, toggle, import, and ingest operations change external state: show the intended target and payload, honor the user's authorization, and do not broaden the requested scope. Prefer idempotent operations where the API supports them.
+Read operations may proceed when the user asks for inspection or analysis. For create, update, delete, toggle, import, and ingest operations, verify the intended target and payload and do not broaden the user's requested scope. Ask before proceeding only when the target is ambiguous, the operation is destructive, or the user has not authorized the external change. Prefer idempotent operations where the API supports them.
 
 ## Call the REST API
 
@@ -114,7 +114,7 @@ Send workspace API requests under `/v0/*`:
 
 ```bash
 curl -sS "https://api.formo.so/v0/profiles/vitalik.eth?expand=labels,chains" \
-  -H "Authorization: Bearer $FORMO_API_KEY"
+  -H "Authorization: Bearer <workspace-api-key>"
 ```
 
 Successful single-resource responses are bare resources. List endpoints normally return `{data,page,size,total,has_more}`. Errors use `{error:{code,message,doc_url,param?,details?}}`; branch on `error.code`, not the human-readable message.
@@ -129,3 +129,4 @@ Use page-based pagination, respect rate limits, and retry only safe or explicitl
 - Validate SQL against discovered schemas. Never invent columns, endpoints, or filter fields.
 - State assumptions and call out partial data, sampling, timezone ambiguity, or unavailable expansions.
 - Include the source interface used (MCP tool, CLI command, or REST endpoint) when handing off reproducible work.
+- Note that Formo requires an account and that feature or API availability can depend on the workspace plan.
