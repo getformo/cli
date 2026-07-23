@@ -2,10 +2,3 @@ interface:
   display_name: "Formo Analytics"
   short_description: "Query product and onchain analytics with Formo"
   default_prompt: "Use $formo-analytics to analyze my Formo project data."
-dependencies:
-  tools:
-    - type: "mcp"
-      value: "formo"
-      description: "Formo analytics and documentation MCP server"
-      transport: "streamable_http"
-      url: "https://api.formo.so/v0/mcp/"
