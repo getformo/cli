@@ -2,6 +2,14 @@
 
 Skills available via the `formo` CLI. Requires a Formo API key — set `FORMO_API_KEY` or run `formo login <apiKey>`.
 
+## Install the agent skill
+
+Install the [`formo-analytics`](skills/formo-analytics/SKILL.md) skill in an Agent Skills-compatible tool:
+
+```bash
+npx skills add https://github.com/getformo/cli/tree/main/skills/formo-analytics
+```
+
 ---
 
 ## Authentication
