@@ -1,0 +1,4 @@
+interface:
+  display_name: "Formo Analytics"
+  short_description: "Query product and onchain analytics with Formo"
+  default_prompt: "Use $formo-analytics to analyze my Formo project data."
