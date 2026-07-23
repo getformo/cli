@@ -3,6 +3,7 @@
   "version": "1.0.2",
   "packageManager": "pnpm@11.1.2",
   "description": "Formo API CLI — query profiles and analytics data",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/getformo/cli.git"

@@ -10,6 +10,23 @@ npm install -g @formo/cli
 npx @formo/cli
 ```
 
+## Install the Formo Analytics agent skill
+
+This repository also ships the [`formo-analytics`](skills/formo-analytics/SKILL.md) skill for Claude Code, Codex, and other [Agent Skills](https://agentskills.io)-compatible tools. It teaches agents to use Formo's MCP server, CLI, and REST API for project-scoped product and onchain analytics.
+
+Install it in the current project:
+
+```bash
+npx skills add https://github.com/getformo/cli/tree/main/skills/formo-analytics
+```
+
+Or install it globally for Claude Code and Codex:
+
+```bash
+npx skills add getformo/cli --skill formo-analytics --global \
+  --agent claude-code --agent codex
+```
+
 ## Authentication
 
 Save your API key locally:
