@@ -1,4 +1,8 @@
-import axios, { AxiosError } from 'axios'
+import axios, {
+  AxiosError,
+  type AxiosInstance,
+  type AxiosRequestConfig,
+} from 'axios'
 import { getApiKey } from './config'
 
 export const DEFAULT_API_BASE_URL = 'https://api.formo.so'
@@ -48,7 +52,14 @@ export function parseApiError(error: AxiosError): DecoratedApiError {
   if (apiError?.param) parts.push(`Param: ${apiError.param}`)
   if (apiError?.details && Object.keys(apiError.details).length > 0) {
     const details = Object.entries(apiError.details)
-      .map(([key, value]) => `${key}: ${String(value)}`)
+      .map(
+        ([key, value]) =>
+          `${key}: ${
+            typeof value === 'object' && value !== null
+              ? JSON.stringify(value)
+              : String(value)
+          }`,
+      )
       .join('; ')
     parts.push(`Details: ${details}`)
   }
@@ -69,16 +80,40 @@ export interface ClientOptions {
   apiKey?: string
 }
 
-function createClient(options: ClientOptions = {}) {
+/**
+ * The response interceptor below unwraps every response to its body
+ * (`res.data`), so the raw AxiosInstance types would lie — they promise
+ * `AxiosResponse<T>` while the runtime value is the body itself. This
+ * interface states what actually comes back.
+ */
+export interface FormoClient {
+  get(url: string, config?: AxiosRequestConfig): Promise<unknown>
+  post(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<unknown>
+  put(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<unknown>
+  patch(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<unknown>
+  delete(url: string, config?: AxiosRequestConfig): Promise<unknown>
+  request(config: AxiosRequestConfig): Promise<unknown>
+  defaults: AxiosInstance['defaults']
+}
+
+function createClient(options: ClientOptions = {}): FormoClient {
   const apiKey = options.apiKey ?? getApiKey()
   const baseURL = options.baseURL ?? getApiBaseUrl()
+
+  // Fail here, not with a server-side 401: every authenticated command needs
+  // a key, and this guard catches call sites that forget requireApiKey().
+  if (!apiKey) {
+    throw new Error(
+      'No API key configured. Run `formo login <apiKey>` or set FORMO_API_KEY env var.',
+    )
+  }
 
   const instance = axios.create({
     baseURL,
     timeout: 30_000,
     headers: {
       'Content-Type': 'application/json',
-      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      Authorization: `Bearer ${apiKey}`,
     },
   })
 
@@ -89,7 +124,9 @@ function createClient(options: ClientOptions = {}) {
     },
   )
 
-  return instance
+  // The interceptor changes what the promise resolves to; the cast makes the
+  // public type match the runtime behavior (see FormoClient above).
+  return instance as unknown as FormoClient
 }
 
 export function createEventsClient(writeKey: string) {

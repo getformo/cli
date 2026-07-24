@@ -26,18 +26,19 @@ describe('lib/client', function () {
 
     it('throws when no API key is configured', function () {
       const savedEnv = process.env.FORMO_API_KEY;
+      const savedConfigDir = process.env.FORMO_CONFIG_DIR;
       delete process.env.FORMO_API_KEY;
-      const configFile = path.join(os.homedir(), '.config', 'formo', 'config.json');
-      let configBackup: string | null = null;
-      try {
-        configBackup = fs.readFileSync(configFile, 'utf-8');
-        fs.writeFileSync(configFile, '{}', { mode: 0o600 });
-      } catch { /* file may not exist */ }
+      // Point config at an empty temp dir so the real config file (which may
+      // hold a key) can't satisfy the lookup — and is never touched.
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'formo-client-test-'));
+      process.env.FORMO_CONFIG_DIR = tmpDir;
       try {
         expect(() => requireApiKey()).to.throw(/No API key configured/);
+        expect(() => createClient()).to.throw(/No API key configured/);
       } finally {
-        if (configBackup !== null) fs.writeFileSync(configFile, configBackup, { mode: 0o600 });
-        process.env.FORMO_API_KEY = savedEnv;
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+        restoreEnv('FORMO_CONFIG_DIR', savedConfigDir);
+        restoreEnv('FORMO_API_KEY', savedEnv);
       }
     });
   });

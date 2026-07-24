@@ -224,8 +224,18 @@ profiles.command('search', {
   options: z.object({
     address: z.string().optional().describe('Filter by wallet address'),
     search: z.string().optional().describe('Free-text search across address and identity fields'),
-    page: z.coerce.number().optional().describe('Page number (1-indexed, default 1)'),
-    size: z.coerce.number().optional().describe('Page size (default 100, max 1000)'),
+    page: z.coerce
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe('Page number (1-indexed, default 1)'),
+    size: z.coerce
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe('Page size (default 100, max 1000)'),
     orderBy: z
       .enum([
         'last_onchain',
@@ -301,7 +311,7 @@ profiles.command('search', {
     },
   ],
   hint: 'Requires profiles:read scope on your API key. Filter "field" must be a typed path (e.g. users.net_worth_usd) — bare names are ignored by the API.',
-  run({ args: _args, options }) {
+  run({ options }) {
     return searchProfilesRun(options)
   },
 })
@@ -440,14 +450,16 @@ export interface CreateProfileLabelOptions {
 
 export function buildCreateLabelBody(options: CreateProfileLabelOptions): unknown {
   if (options.labels) {
-    try {
-      const parsed = JSON.parse(options.labels)
-      if (!Array.isArray(parsed) || parsed.length === 0)
-        throw new Error('not a non-empty array')
-      return parsed
-    } catch {
-      throw new Error('--labels must be a non-empty JSON array of UserLabelInput objects')
+    const parsed = parseJsonArrayOfObjects(options.labels, '--labels')
+    if (parsed.length === 0) {
+      throw new Error('--labels must contain at least one item')
     }
+    for (const label of parsed) {
+      if (typeof label.tag_id !== 'string' || label.tag_id.length === 0) {
+        throw new Error('--labels entries must each include a non-empty string tag_id')
+      }
+    }
+    return parsed
   }
   if (options.tagId) {
     const single: Record<string, string | number> = { tag_id: options.tagId }

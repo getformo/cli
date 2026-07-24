@@ -7,8 +7,10 @@
  * (or directly in the test) to opt into the skip.
  */
 import type { Context } from 'mocha';
+import { getApiBaseUrl } from '../../src/lib/client';
 
-const API_BASE_URL = 'https://api.formo.so';
+// Honor FORMO_API_BASE_URL so the probe hits the same host the client uses.
+const API_BASE_URL = getApiBaseUrl();
 
 let probeStatus: 'unknown' | 'ok' | 'unauthorized' | 'unreachable' = 'unknown';
 let probePromise: Promise<void> | undefined;

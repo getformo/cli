@@ -7,25 +7,40 @@ The Formo CLI is built with [incur](https://github.com/tryincur/incur), a type-s
 ## Project structure
 
 ```
-apps/cli/
+cli/
 ├── src/
 │   ├── index.ts              # CLI entry point — registers all commands and calls cli.serve()
-│   ├── commands/
-│   │   ├── profiles.ts       # profiles get / profiles search commands + exported run helpers
-│   │   ├── profiles.test.ts  # unit tests for profiles commands
-│   │   ├── query.ts          # query run command + exported run helper
-│   │   └── query.test.ts     # unit tests for query commands
+│   ├── commands/             # one file per command group + exported run helpers
+│   │   ├── alerts.ts
+│   │   ├── analytics.ts
+│   │   ├── boards.ts
+│   │   ├── charts.ts
+│   │   ├── contracts.ts
+│   │   ├── events.ts
+│   │   ├── import.ts
+│   │   ├── profiles.ts
+│   │   ├── query.ts
+│   │   └── segments.ts
 │   └── lib/
 │       ├── client.ts         # axios HTTP client factory + requireApiKey guard
-│       ├── client.test.ts    # unit tests for client
 │       ├── config.ts         # ~/.config/formo/config.json read/write + FORMO_API_KEY env
-│       └── config.test.ts    # unit tests for config
+│       ├── json.ts           # JSON option parsing helpers
+│       ├── sql.ts            # SQL helpers (strip trailing FORMAT clause)
+│       └── ui.ts             # terminal styling utilities
+├── test/
+│   ├── commands/             # per-command tests (mostly live-API integration tests)
+│   ├── lib/                  # unit tests for lib modules
+│   ├── helpers/
+│   │   └── liveApi.ts        # probes the live API once; skips integration tests on auth failure
+│   ├── preload.cjs           # loads .env, maps TEST_TOKEN → FORMO_API_KEY
+│   └── setup.ts
+├── .mocharc.json
 ├── CONTRIBUTING.md
 ├── README.md
 ├── SKILLS.md
 ├── package.json
 ├── tsconfig.json
-└── vitest.config.ts
+└── tsconfig.test.json
 ```
 
 ## How commands work
@@ -59,7 +74,7 @@ This pattern means tests call `getProfileRun(...)` directly without needing to i
 2. Export a named helper function containing the logic.
 3. Register the command on a `Cli.create(...)` subcommand group or directly on `cli`.
 4. Register the group in `src/index.ts` if it's new.
-5. Write tests in a `.test.ts` sibling file.
+5. Write tests in `test/commands/<name>.test.ts`.
 
 Minimal example — adding `formo wallets list`:
 
@@ -115,41 +130,39 @@ color.red('text')       // Red text
 ## Local development
 
 ```bash
-# Install dependencies from repo root
+# Install dependencies
 pnpm install
 
 # Run in dev mode (ts-node, no build needed)
-FORMO_API_KEY=formo_xxx pnpm --filter @formo/cli dev profiles get 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
+FORMO_API_KEY=formo_xxx pnpm dev profiles get 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
 
 # Or set the key once and run any command
 export FORMO_API_KEY=formo_xxx
-pnpm --filter @formo/cli dev query run "SELECT count(*) FROM events"
+pnpm dev query run "SELECT count(*) FROM events"
 
 # Build TypeScript
-pnpm --filter @formo/cli build
+pnpm build
 
-# Run the built binary directly
-node apps/cli/dist/index.js profiles search --limit 5
+# Run the built entrypoint directly
+node dist/index.js profiles search --size 5
 ```
 
 ## Running tests
 
 ```bash
 # Run all tests once
-pnpm --filter @formo/cli test
+pnpm test
 
 # Watch mode
-pnpm --filter @formo/cli test:watch
+pnpm test:watch
 ```
 
-Tests use [Vitest](https://vitest.dev/) with `vi.mock('../lib/client')` to isolate HTTP calls. The pattern is:
+Tests live in `test/` and run with [Mocha](https://mochajs.org/) via [tsx](https://tsx.is/) (see `.mocharc.json`), with [chai](https://www.chaijs.com/) `expect` assertions. There are two kinds of tests:
 
-1. Mock `createClient` to return a fake axios instance with `vi.fn()` methods.
-2. Mock `requireApiKey` to be a no-op (or throw for error cases).
-3. Import and call the exported helper directly.
-4. Assert on the mock calls.
+- **Live-API integration tests** — most of `test/commands/` hits the real Formo API. `test/preload.cjs` loads `.env` and requires `TEST_TOKEN` (mapped to `FORMO_API_KEY`) before any test module loads; the run aborts if it is missing. `test/helpers/liveApi.ts` probes the API once and, if the key is rejected or the API is unreachable, integration tests are skipped with a clear message via `requiresLiveApi(this)`.
+- **Pure unit tests** — `test/commands/bodyBuilders.test.ts` and the `test/lib/` suites test exported helpers (body builders, JSON/SQL parsing, config) directly without any network calls.
 
-Note: `requireApiKey()` and `JSON.parse()` errors throw **synchronously**, so use `expect(() => fn()).toThrow(...)` (not `rejects.toThrow`) for those cases.
+Note: `requireApiKey()` and `JSON.parse()` errors throw **synchronously**, so use `expect(() => fn()).to.throw(...)` for those cases.
 
 ## AI agent mode
 
@@ -170,15 +183,15 @@ When an AI agent runs `formo` with the incur sync protocol, it gets a structured
 
 ## Authentication in tests
 
-Tests mock `requireApiKey` so they never need a real API key. For manual end-to-end testing:
+The test suite needs a real API key: add `TEST_TOKEN=formo_your_key` to a `.env` file in the repo root before running `pnpm test`. For manual end-to-end testing:
 
 ```bash
 # Option 1: env var (temporary)
-FORMO_API_KEY=formo_xxx pnpm --filter @formo/cli dev profiles get vitalik.eth
+FORMO_API_KEY=formo_xxx pnpm dev profiles get vitalik.eth
 
 # Option 2: save to config file (persistent)
-pnpm --filter @formo/cli dev login formo_xxx
-pnpm --filter @formo/cli dev profiles get vitalik.eth
+pnpm dev login formo_xxx
+pnpm dev profiles get vitalik.eth
 ```
 
 The config is stored at `~/.config/formo/config.json` with mode `0600`.

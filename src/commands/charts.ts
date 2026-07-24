@@ -6,6 +6,13 @@ import {
   parseStringArray,
 } from '../lib/json'
 import { stripTrailingFormatClause } from '../lib/sql'
+import {
+  buildPaginationParams,
+  paginationOptionsSchema,
+  type PaginationOptions,
+} from '../lib/pagination'
+
+export type { PaginationOptions }
 
 export const charts = Cli.create('charts', {
   description:
@@ -24,18 +31,6 @@ const chartTypeSchema = z.enum([
   'user_paths',
   'retention',
 ])
-
-export interface PaginationOptions {
-  page?: number
-  size?: number
-}
-
-function buildPaginationParams(options: PaginationOptions = {}) {
-  const params: Record<string, number> = {}
-  if (options.page !== undefined) params.page = options.page
-  if (options.size !== undefined) params.size = options.size
-  return params
-}
 
 // ── Shared chart body builder ──
 
@@ -149,8 +144,7 @@ charts.command('list', {
   description: 'List all charts for a board, including executed results',
   options: z.object({
     boardId: z.string().describe('Board ID to list charts from'),
-    page: z.coerce.number().optional().describe('Page number (1-indexed, default 1)'),
-    size: z.coerce.number().optional().describe('Page size (default 100, max 200)'),
+    ...paginationOptionsSchema,
   }),
   examples: [
     {
@@ -181,8 +175,7 @@ charts.command('meta', {
   description: 'List lightweight chart metadata for a board without query results',
   options: z.object({
     boardId: z.string().describe('Board ID to list chart metadata from'),
-    page: z.coerce.number().optional().describe('Page number (1-indexed, default 1)'),
-    size: z.coerce.number().optional().describe('Page size (default 100, max 200)'),
+    ...paginationOptionsSchema,
   }),
   examples: [
     {
@@ -331,6 +324,11 @@ export function updateChartRun(
   const client = createClient()
   const updates = coerceChartBody(input)
 
+  // The charts endpoint only supports full-body PUT, so emulate a partial
+  // update by fetching the current chart and merging flags over it. Two
+  // consequences: a concurrent edit between the GET and PUT is overwritten,
+  // and fields can't be cleared via typed flags (nulls are normalized to
+  // undefined below) — use --body with explicit nulls to clear.
   return client
     .get(
       `/v0/boards/${encodeURIComponent(boardId)}/charts/${encodeURIComponent(chartId)}`,

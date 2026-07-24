@@ -3,32 +3,30 @@ import os from 'os';
 import path from 'path';
 import { expect } from 'chai';
 
-// We test config functions by overriding the env var so getApiKey() reads from env,
-// and by directly exercising readConfig/saveConfig using the real config path.
-// For isolation we save/restore the real config file around each test.
+// Config functions honor FORMO_CONFIG_DIR (resolved lazily on every call),
+// so the suite points it at a throwaway temp dir — the developer's real
+// ~/.config/formo/config.json is never touched.
 
 describe('lib/config', function () {
   let originalApiKey: string | undefined;
-  let backupConfig: string | null = null;
-  const configFile = path.join(os.homedir(), '.config', 'formo', 'config.json');
+  let originalConfigDir: string | undefined;
+  let tmpDir: string;
+  let configFile: string;
 
   before(function () {
     originalApiKey = process.env.FORMO_API_KEY;
-    // Back up any existing config
-    try {
-      backupConfig = fs.readFileSync(configFile, 'utf-8');
-    } catch {
-      backupConfig = null;
-    }
+    originalConfigDir = process.env.FORMO_CONFIG_DIR;
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'formo-config-test-'));
+    process.env.FORMO_CONFIG_DIR = tmpDir;
+    configFile = path.join(tmpDir, 'config.json');
   });
 
   after(function () {
-    // Restore original config
-    if (backupConfig !== null) {
-      fs.mkdirSync(path.dirname(configFile), { recursive: true });
-      fs.writeFileSync(configFile, backupConfig, { mode: 0o600 });
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    if (originalConfigDir !== undefined) {
+      process.env.FORMO_CONFIG_DIR = originalConfigDir;
     } else {
-      try { fs.unlinkSync(configFile); } catch { /* ignore */ }
+      delete process.env.FORMO_CONFIG_DIR;
     }
     if (originalApiKey !== undefined) {
       process.env.FORMO_API_KEY = originalApiKey;
@@ -50,6 +48,20 @@ describe('lib/config', function () {
       saveConfig({ apiKey: 'test_key_123' });
       const cfg = readConfig();
       expect(cfg).to.have.property('apiKey', 'test_key_123');
+    });
+
+    it('returns empty object for non-object JSON (null, string, array)', async function () {
+      const { readConfig } = await import('../../src/lib/config');
+      for (const content of ['null', '"abc"', '[1,2]']) {
+        fs.writeFileSync(configFile, content, { mode: 0o600 });
+        expect(readConfig(), `content: ${content}`).to.deep.equal({});
+      }
+    });
+
+    it('returns empty object for malformed JSON', async function () {
+      const { readConfig } = await import('../../src/lib/config');
+      fs.writeFileSync(configFile, '{not json', { mode: 0o600 });
+      expect(readConfig()).to.deep.equal({});
     });
   });
 
@@ -96,7 +108,7 @@ describe('lib/config', function () {
       saveConfig({ apiKey: 'file_key_fallback' });
       expect(getApiKey()).to.equal('file_key_fallback');
       // Restore for other tests
-      process.env.FORMO_API_KEY = process.env.TEST_TOKEN;
+      process.env.FORMO_API_KEY = originalApiKey;
     });
   });
 });

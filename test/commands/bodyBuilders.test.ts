@@ -20,6 +20,7 @@ import {
   parseSearchConditions,
 } from '../../src/commands/profiles';
 import { buildCreateSegmentBody } from '../../src/commands/segments';
+import { buildIngestEventsBody } from '../../src/commands/events';
 
 describe('commands / body builders', function () {
   // ── Alerts ──
@@ -421,6 +422,113 @@ describe('commands / body builders', function () {
       expect(() => parseSearchConditions('[{"op":"gt","value":1}]')).to.throw(
         /must have a non-empty string "field"/,
       );
+    });
+  });
+
+  // ── Input validation guards ──
+
+  describe('buildBoardBody() validation', function () {
+    it('throws when title resolves to an empty string', function () {
+      expect(() => buildBoardBody({ title: '' })).to.throw(/must not be empty/);
+      expect(() => buildBoardBody({ name: '' })).to.throw(/must not be empty/);
+    });
+  });
+
+  describe('chain validation', function () {
+    const base = {
+      address: '0xabc',
+      name: 'Test',
+      abi: '[]',
+      events: '[]',
+    };
+
+    it('rejects zero, negative, and fractional chain IDs', function () {
+      for (const chain of [0, -5, 1.5, NaN]) {
+        expect(
+          () => buildCreateContractBody({ ...base, chain }),
+          `chain: ${chain}`,
+        ).to.throw(/chain must be a positive integer/);
+      }
+    });
+
+    it('accepts a positive integer chain', function () {
+      const body = buildCreateContractBody({ ...base, chain: 137 });
+      expect(body).to.have.property('chain', 137);
+    });
+  });
+
+  describe('buildCreateSegmentBody() validation', function () {
+    it('rejects non-array JSON', function () {
+      expect(() =>
+        buildCreateSegmentBody({ title: 'x', filterSets: '{"a":1}' }),
+      ).to.throw(/must be a valid JSON array/);
+    });
+
+    it('rejects arrays containing non-string entries', function () {
+      expect(() =>
+        buildCreateSegmentBody({ title: 'x', filterSets: '[{"a":1}]' }),
+      ).to.throw(/JSON array of strings/);
+    });
+  });
+
+  describe('buildImportBody() mutually exclusive flags', function () {
+    it('throws when both --addresses and --rows are provided', function () {
+      expect(() =>
+        buildImportBody({
+          addresses: '["0xabc"]',
+          rows: '[{"address":"0xdef"}]',
+        }),
+      ).to.throw(/only one of --addresses or --rows/);
+    });
+
+    it('throws when neither is provided', function () {
+      expect(() => buildImportBody({})).to.throw(/--addresses or --rows/);
+    });
+  });
+
+  describe('buildIngestEventsBody()', function () {
+    it('wraps a single --event in an array', function () {
+      const body = buildIngestEventsBody({ event: '{"event":"Test"}' });
+      expect(body).to.deep.equal([{ event: 'Test' }]);
+    });
+
+    it('throws when both --event and --events are provided', function () {
+      expect(() =>
+        buildIngestEventsBody({
+          event: '{"event":"a"}',
+          events: '[{"event":"b"}]',
+        }),
+      ).to.throw(/only one of --event or --events/);
+    });
+
+    it('throws when neither is provided', function () {
+      expect(() => buildIngestEventsBody({})).to.throw(/--event or --events/);
+    });
+
+    it('throws on an empty --events array', function () {
+      expect(() => buildIngestEventsBody({ events: '[]' })).to.throw(
+        /at least one event/,
+      );
+    });
+  });
+
+  describe('buildCreateLabelBody() batch validation', function () {
+    it('rejects an empty --labels array', function () {
+      expect(() => buildCreateLabelBody({ labels: '[]' })).to.throw(
+        /at least one item/,
+      );
+    });
+
+    it('rejects non-object entries', function () {
+      expect(() => buildCreateLabelBody({ labels: '["vip"]' })).to.throw(
+        /array of objects/,
+      );
+    });
+
+    it('rejects entries without a tag_id', function () {
+      expect(() =>
+        buildCreateLabelBody({ labels: '[{"value":"gold"}]' }),
+      ).to.throw(/non-empty string tag_id/);
     });
   });
 });

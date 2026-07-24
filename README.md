@@ -104,6 +104,7 @@ Search wallet profiles with filters, sorting, and pagination. Returns a `Paginat
 | Option | Description |
 |---|---|
 | `--address` | Filter by wallet address |
+| `--search` | Free-text search across address and identity fields |
 | `--page` | Page number (1-indexed, default `1`) |
 | `--size` | Page size (default `100`, max `1000`) |
 | `--order-by` | `last_onchain`, `first_onchain`, `net_worth_usd`, `updated_at`, `tx_count`, `first_seen`, `last_seen`, `num_sessions`, `revenue`, `volume`, `points` |
@@ -120,6 +121,20 @@ formo profiles search --conditions '[{"field":"users.net_worth_usd","op":"gt","v
 formo profiles search --conditions '[{"field":"users.net_worth_usd","op":"gt","value":10000},{"field":"users.volume","op":"gt","value":1000}]' --logic or --size 20
 formo profiles search --conditions '[{"field":"chains.1.balance","op":"gt","value":1000}]' --size 20
 ```
+
+### Lifecycle tuning (advanced)
+
+Both `profiles get` and `profiles search` accept optional flags to override the lifecycle stage thresholds used when computing `lifecycle`:
+
+| Option | Description |
+|---|---|
+| `--new-window-days` | Override lifecycle new-user window in days |
+| `--churn-window-days` | Override lifecycle churn window in days |
+| `--power-user-min-active-days` | Override lifecycle power-user minimum active days |
+| `--power-user-window-days` | Override lifecycle power-user window in days |
+| `--resurrected-gap-days` | Override lifecycle resurrected gap in days |
+| `--at-risk-min-days-inactive` | Override lifecycle at-risk minimum inactive days |
+| `--at-risk-prior-active-days-threshold` | Override lifecycle at-risk prior active days threshold |
 
 ### `profiles update <address>`
 
@@ -205,6 +220,7 @@ Get a single alert by ID.
 | `--trigger-filters` | JSON array of trigger filter objects |
 | `--recipient` | JSON array of recipient objects |
 | `--secret` | Webhook secret |
+| `--slack-property-keys` | JSON array of event/user property keys to include in Slack alerts |
 
 ```bash
 formo alerts create --name "High value tx" --trigger-type event \
@@ -213,7 +229,7 @@ formo alerts create --name "High value tx" --trigger-type event \
 ```
 
 ### `alerts update <alertId>`
-Same options as `create`. Replaces the alert configuration.
+Same options as `create`. Replaces the alert configuration in full — omitted options are reset to their defaults (e.g. leaving out `--trigger-filters` clears the existing trigger filters).
 
 ### `alerts delete <alertId>`
 Delete an alert.
@@ -271,7 +287,7 @@ Delete a board.
 
 ## `formo charts`
 
-Chart commands. Charts live inside a board. Requires `charts:read` / `charts:write`.
+Chart commands. Charts live inside a board. Requires `boards:read` / `boards:write`.
 
 ### `charts list --board-id <boardId>`
 List all charts in a board.
@@ -294,8 +310,12 @@ formo charts create --board-id brd_123 --title "Daily Active Users" \
 formo charts create --board-id brd_123 --body '{"title":"Recent Events","chart_type":"table","query":"SELECT * FROM events LIMIT 10"}'
 ```
 
-### `charts update <chartId> --board-id <boardId> --body '<json>'`
-Update a chart.
+### `charts update <chartId> --board-id <boardId> [options]`
+Update a chart. Accepts the same options as `create`: a raw `--body '<json>'` and/or typed flags (`--title`, `--chart-type`, `--query`, `--description`, `--x-axis`, `--y-axis`, `--group-by`, `--steps`, `--settings`). Typed flags override matching `--body` keys.
+
+```bash
+formo charts update chart_abc123 --board-id brd_123 --title "Renamed chart"
+```
 
 ### `charts query <chartId> --board-id <boardId> --date-from <YYYY-MM-DD> --date-to <YYYY-MM-DD>`
 Execute a saved chart that uses `{{date_from}}` / `{{date_to}}` variables.
@@ -420,7 +440,7 @@ formo analytics retention --filters '[{"field":"location","op":"eq","value":"US"
 
 ### `import wallets`
 
-Bulk-import wallet addresses into the project via the events API.
+Bulk-import wallet addresses into the project via the main Formo API, authenticated with your workspace API key.
 
 | Option | Description |
 |---|---|
@@ -432,17 +452,26 @@ formo import wallets --addresses '["0xabc...","0xdef..."]'
 formo import wallets --rows '[{"address":"0xabc...","properties":{"display_name":"Alice"}}]'
 ```
 
+> Requires `profiles:write` scope. Only available on Scale and Enterprise plans.
+
 ---
 
 ## `formo events`
 
 ### `events ingest`
 
-Send raw analytics events to `events.formo.so`. This command uses a project SDK write key, not the workspace API key.
+Send raw analytics events to `events.formo.so`. This command uses a project SDK write key, not the workspace API key — pass it via `--write-key` or the `FORMO_WRITE_KEY` environment variable.
+
+| Option | Description |
+|---|---|
+| `--event` | Single event as a JSON object; wrapped in an array before sending |
+| `--events` | JSON array of event objects to send as a batch |
+| `--write-key` | Project SDK write key (defaults to `FORMO_WRITE_KEY`) |
 
 ```bash
 export FORMO_WRITE_KEY=formo_write_key_xxx
 formo events ingest --event '{"type":"track","channel":"cli","version":"1","anonymous_id":"anon_123","event":"CLI Test","context":{},"properties":{},"original_timestamp":"2026-04-27T23:05:38.000Z","sent_at":"2026-04-27T23:05:42.000Z","message_id":"cli-test-1"}'
+formo events ingest --events '[{"type":"track","event":"First"},{"type":"track","event":"Second"}]'
 ```
 
 ---

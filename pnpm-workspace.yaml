@@ -7,5 +7,9 @@ overrides:
 allowBuilds:
   esbuild: true
 
+# Kebab-cases camelCase flag names in incur's help/skill/example output.
+# incur is pinned to an exact version in package.json while this patch is
+# applied — upstream is converging on the same fix, so re-check (and ideally
+# drop the patch) on every incur bump.
 patchedDependencies:
   incur: patches/incur.patch
