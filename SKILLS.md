@@ -94,10 +94,10 @@ formo profiles search --size 10
 formo profiles search --order-by net_worth_usd --order-dir desc --size 5
 
 # Profiles with net worth over $10k
-formo profiles search --conditions '[{"field":"users.net_worth_usd","op":"gt","value":10000}]' --size 20
+formo profiles search --conditions '[{"field":"users.net_worth_usd","op":"greater","value":10000}]' --size 20
 
 # Profiles with > $1k balance on Ethereum (chain 1)
-formo profiles search --conditions '[{"field":"chains.1.balance","op":"gt","value":1000}]' --size 20
+formo profiles search --conditions '[{"field":"chains.1.balance","op":"greater","value":1000}]' --size 20
 
 # Second page of 20, sorted by tx count
 formo profiles search --order-by tx_count --order-dir desc --page 2 --size 20 --expand labels
@@ -105,7 +105,7 @@ formo profiles search --order-by tx_count --order-dir desc --page 2 --size 20 --
 
 **FilterCondition schema:**
 ```json
-{ "field": "users.net_worth_usd", "op": "gt", "value": 10000 }
+{ "field": "users.net_worth_usd", "op": "greater", "value": 10000 }
 ```
 
 | Property | Type | Description |

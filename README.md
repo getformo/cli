@@ -116,9 +116,9 @@ Search wallet profiles with filters, sorting, and pagination. Returns a `Paginat
 formo profiles search --size 10
 formo profiles search --order-by net_worth_usd --order-dir desc --size 5
 formo profiles search --page 2 --size 20
-formo profiles search --conditions '[{"field":"users.net_worth_usd","op":"gt","value":10000}]' --size 20
-formo profiles search --conditions '[{"field":"users.net_worth_usd","op":"gt","value":10000},{"field":"users.volume","op":"gt","value":1000}]' --logic or --size 20
-formo profiles search --conditions '[{"field":"chains.1.balance","op":"gt","value":1000}]' --size 20
+formo profiles search --conditions '[{"field":"users.net_worth_usd","op":"greater","value":10000}]' --size 20
+formo profiles search --conditions '[{"field":"users.net_worth_usd","op":"greater","value":10000},{"field":"users.volume","op":"greater","value":1000}]' --logic or --size 20
+formo profiles search --conditions '[{"field":"chains.1.balance","op":"greater","value":1000}]' --size 20
 ```
 
 ### `profiles update <address>`
@@ -453,8 +453,8 @@ formo events ingest --event '{"type":"track","channel":"cli","version":"1","anon
 
 ```json
 [
-  { "field": "users.net_worth_usd", "op": "gt", "value": 10000 },
-  { "field": "chains.1.balance", "op": "gte", "value": 1000 }
+  { "field": "users.net_worth_usd", "op": "greater", "value": 10000 },
+  { "field": "chains.1.balance", "op": "greaterOrEqual", "value": 1000 }
 ]
 ```
 

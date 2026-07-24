@@ -256,7 +256,8 @@ profiles.command('search', {
           'Chains: chains.balance or chains.{chain_id}.balance. ' +
           'Apps: apps.{app_id}.balance. Tokens: tokens.{address}.balance ' +
           '(optional "scope":"any"|"protocol" + "appId"). Labels: labels.{tag_id}. ' +
-          'op: eq, neq, gt, gte, lt, lte, in, nin.',
+          'op: equals, notEquals, greater, greaterOrEqual, less, lessOrEqual, in, notIn, includes, notEmpty, isEmpty ' +
+          '(includes = substring, social fields only; notEmpty/isEmpty = value-less existence checks on string fields).',
       ),
     logic: z
       .enum(['and', 'or'])
