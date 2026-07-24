@@ -41,7 +41,7 @@ Or set the `FORMO_API_KEY` environment variable — it takes precedence over the
 export FORMO_API_KEY=formo_abc123
 ```
 
-Get your API key from `Settings → API Keys` in the [Formo dashboard](https://app.formo.so).
+Get your API key from `Settings → API` in the [Formo dashboard](https://app.formo.so).
 
 For local development or proxying, override API hosts with:
 
