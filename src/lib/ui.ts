@@ -2,12 +2,13 @@
  * Terminal UI utilities for the Formo CLI.
  *
  * Uses raw ANSI escape codes (no dependencies) for coloring and styling.
- * Colors are automatically disabled when stdout is not a TTY (piped output, CI, etc.)
- * or when the NO_COLOR environment variable is set.
+ * All decorated output is written to stderr (stdout is reserved for command
+ * results), so color is keyed to stderr being a TTY. Disabled whenever the
+ * NO_COLOR environment variable is present (any value, per the spec).
  */
 
-const isTTY = process.stdout.isTTY === true
-const noColor = !!process.env.NO_COLOR
+const isTTY = process.stderr.isTTY === true
+const noColor = process.env.NO_COLOR !== undefined
 
 /** Whether color output is enabled */
 const colorEnabled = isTTY && !noColor
@@ -45,7 +46,7 @@ const LOGO_LINES = [
 
 /**
  * Returns the Formo ASCII art banner in green.
- * Only shown when stdout is a TTY.
+ * Only shown when stderr is a TTY.
  */
 export function banner(): string {
   if (!isTTY) return ''
@@ -77,10 +78,7 @@ export function info(message: string): string {
 
 // ── Formatting helpers ──
 
-export function keyValue(key: string, value: string): string {
-  return `${color.dim(key + ':')} ${value}`
-}
-
-export function heading(text: string): string {
-  return color.boldGreen(text)
+/** Mask an API key for display, keeping just enough to identify it. */
+export function maskKey(key: string): string {
+  return key.length > 12 ? key.slice(0, 8) + '…' + key.slice(-4) : '***'
 }

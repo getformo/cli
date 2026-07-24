@@ -56,6 +56,9 @@ jobs:
       - name: Run lint
         run: pnpm lint
 
+      - name: Typecheck (src + tests)
+        run: pnpm typecheck
+
   test:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: [build, lint]

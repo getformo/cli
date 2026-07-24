@@ -1,5 +1,6 @@
 import { Cli, z } from 'incur'
 import { createClient, requireApiKey } from '../lib/client'
+import { parseJsonObject } from '../lib/json'
 
 export const analytics = Cli.create('analytics', {
   description:
@@ -72,16 +73,8 @@ export function buildAnalyticsParams(
 
   // --params first, so the validated flags below override it.
   if (options.params) {
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(options.params)
-    } catch {
-      throw new Error('--params must be a valid JSON object')
-    }
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      throw new Error('--params must be a valid JSON object')
-    }
-    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+    const parsed = parseJsonObject(options.params, '--params')
+    for (const [key, value] of Object.entries(parsed)) {
       if (RESERVED_PARAM_KEYS.has(key)) {
         throw new Error(
           `--params may not set "${key}" — use the --date-from/--date-to/--filters flags instead`,

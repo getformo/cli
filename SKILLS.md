@@ -32,6 +32,14 @@ formo status
 
 Shows whether an API key is configured, where it was loaded from (env var or config file), and masked key value.
 
+### Log out
+
+```bash
+formo logout
+```
+
+Removes the saved API key and clears authentication state.
+
 ---
 
 ## Wallet Profiles
@@ -82,6 +90,7 @@ formo profiles search [options]
 | `--order-dir` | `asc`, `desc` | Sort direction |
 | `--expand` | `string` | Comma-separated fields to expand |
 | `--conditions` | JSON array | Advanced filter conditions (see below) |
+| `--logic` | `and`, `or` | Logic operator for combining conditions (default `and`) |
 
 **`--order-by` values:** `last_onchain`, `first_onchain`, `net_worth_usd`, `updated_at`, `tx_count`, `first_seen`, `last_seen`, `num_sessions`, `revenue`, `volume`, `points`
 
@@ -159,7 +168,7 @@ formo profiles labels delete <address> --tag-id vip
 Execute a SQL query against your Formo analytics data (events, sessions, wallet profiles).
 
 ```bash
-formo query "<sql>"
+formo query run "<sql>"
 ```
 
 > Requires `query:read` scope on your API key.
@@ -167,13 +176,13 @@ formo query "<sql>"
 **Examples:**
 ```bash
 # Count total events
-formo query "SELECT count(*) FROM events"
+formo query run "SELECT count(*) FROM events"
 
 # Top 10 wallets by net worth
-formo query "SELECT address, net_worth_usd FROM wallet_profiles ORDER BY net_worth_usd DESC LIMIT 10"
+formo query run "SELECT address, net_worth_usd FROM wallet_profiles ORDER BY net_worth_usd DESC LIMIT 10"
 
 # Recent sessions
-formo query "SELECT address, last_seen FROM wallet_profiles ORDER BY last_seen DESC LIMIT 5"
+formo query run "SELECT address, last_seen FROM wallet_profiles ORDER BY last_seen DESC LIMIT 5"
 ```
 
 ---
@@ -215,7 +224,7 @@ formo analytics top_wallets --date-from 2026-04-01 --date-to 2026-04-30 --params
 formo analytics retention --filters '[{"field":"location","op":"eq","value":"US"}]'
 ```
 
-Each pipe accepts pipe-specific params via `--params` (see each command's `--help`): e.g. `funnel` → `steps`, `window_seconds`, `funnel_type`, `breakdown`; `kpis` → `group_by`, `limit`; `top_*` → `limit`, `offset`.
+Each pipe accepts pipe-specific params via `--params` (see each command's `--help`): e.g. `funnel` → `steps`, `window_seconds`, `funnel_type`, `group_by`, `limit`, `attribution`; `kpis` → `group_by`, `limit`; `top_*` → `limit`, `offset`.
 
 ---
 

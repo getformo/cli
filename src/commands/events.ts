@@ -17,6 +17,10 @@ function getWriteKey(options: IngestEventsOptions) {
 }
 
 export function buildIngestEventsBody(options: IngestEventsOptions) {
+  if (options.events && options.event) {
+    throw new Error('Provide only one of --event or --events')
+  }
+
   if (options.events) {
     const events = parseJsonArrayOfObjects(options.events, '--events')
     if (events.length === 0) {
@@ -33,13 +37,9 @@ export function buildIngestEventsBody(options: IngestEventsOptions) {
 }
 
 export function ingestEventsRun(options: IngestEventsOptions) {
-  const writeKey = getWriteKey(options)
-  if (!writeKey) {
-    throw new Error(
-      'No event write key configured. Pass --write-key or set FORMO_WRITE_KEY.',
-    )
-  }
-  const client = createEventsClient(writeKey)
+  // createEventsClient throws the "No event write key configured" error for
+  // a missing key — no need to duplicate the guard here.
+  const client = createEventsClient(getWriteKey(options) ?? '')
   return client.post('/v0/raw_events', buildIngestEventsBody(options))
 }
 

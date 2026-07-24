@@ -1,23 +1,18 @@
 import { Cli, z } from 'incur'
 import { createClient, requireApiKey } from '../lib/client'
 import { parseJsonArray } from '../lib/json'
+import {
+  buildPaginationParams,
+  paginationOptionsSchema,
+  type PaginationOptions,
+} from '../lib/pagination'
+
+export type { PaginationOptions }
 
 export const contracts = Cli.create('contracts', {
   description:
     'Smart contract commands — register, list, recommend, update, toggle pipeline inclusion, and remove tracked contracts',
 })
-
-export interface PaginationOptions {
-  page?: number
-  size?: number
-}
-
-function buildPaginationParams(options: PaginationOptions = {}) {
-  const params: Record<string, number> = {}
-  if (options.page !== undefined) params.page = options.page
-  if (options.size !== undefined) params.size = options.size
-  return params
-}
 
 function parseChain(chain: string | number) {
   const value = typeof chain === 'number' ? chain : Number(chain)
@@ -39,10 +34,7 @@ export function listContractsRun(options: PaginationOptions = {}) {
 
 contracts.command('list', {
   description: 'List all tracked contracts for the project',
-  options: z.object({
-    page: z.coerce.number().optional().describe('Page number (1-indexed, default 1)'),
-    size: z.coerce.number().optional().describe('Page size (default 100, max 200)'),
-  }),
+  options: z.object(paginationOptionsSchema),
   examples: [{ description: 'List all project contracts' }],
   hint: 'Requires contracts:read scope on your API key.',
   run({ options }) {
@@ -56,7 +48,7 @@ export function getContractRun(chain: string, address: string) {
   requireApiKey()
   const client = createClient()
   return client.get(
-    `/v0/contracts/${encodeURIComponent(chain)}/${encodeURIComponent(address)}`,
+    `/v0/contracts/${parseChain(chain)}/${encodeURIComponent(address)}`,
   )
 }
 
@@ -210,7 +202,7 @@ export function updateContractRun(
   requireApiKey()
   const client = createClient()
   return client.put(
-    `/v0/contracts/${encodeURIComponent(chain)}/${encodeURIComponent(address)}`,
+    `/v0/contracts/${parseChain(chain)}/${encodeURIComponent(address)}`,
     buildUpdateContractBody(chain, address, options),
   )
 }
@@ -261,7 +253,7 @@ export function updateContractPipelineRun(
   requireApiKey()
   const client = createClient()
   return client.patch(
-    `/v0/contracts/${encodeURIComponent(chain)}/${encodeURIComponent(address)}/pipeline`,
+    `/v0/contracts/${parseChain(chain)}/${encodeURIComponent(address)}/pipeline`,
     buildUpdateContractPipelineBody(includeInPipeline),
   )
 }
@@ -308,7 +300,7 @@ export function deleteContractRun(chain: string, address: string) {
   requireApiKey()
   const client = createClient()
   return client.delete(
-    `/v0/contracts/${encodeURIComponent(chain)}/${encodeURIComponent(address)}`,
+    `/v0/contracts/${parseChain(chain)}/${encodeURIComponent(address)}`,
   )
 }
 

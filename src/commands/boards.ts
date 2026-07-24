@@ -1,21 +1,16 @@
 import { Cli, z } from 'incur'
 import { createClient, requireApiKey } from '../lib/client'
+import {
+  buildPaginationParams,
+  paginationOptionsSchema,
+  type PaginationOptions,
+} from '../lib/pagination'
+
+export type { PaginationOptions }
 
 export const boards = Cli.create('boards', {
   description: 'Dashboard board commands — create, list, update, and delete boards',
 })
-
-export interface PaginationOptions {
-  page?: number
-  size?: number
-}
-
-function buildPaginationParams(options: PaginationOptions = {}) {
-  const params: Record<string, number> = {}
-  if (options.page !== undefined) params.page = options.page
-  if (options.size !== undefined) params.size = options.size
-  return params
-}
 
 // ── List boards ──
 
@@ -27,10 +22,7 @@ export function listBoardsRun(options: PaginationOptions = {}) {
 
 boards.command('list', {
   description: 'List all boards for the project',
-  options: z.object({
-    page: z.coerce.number().optional().describe('Page number (1-indexed, default 1)'),
-    size: z.coerce.number().optional().describe('Page size (default 100, max 200)'),
-  }),
+  options: z.object(paginationOptionsSchema),
   examples: [{ description: 'List all dashboard boards' }],
   hint: 'Requires boards:read scope on your API key.',
   run({ options }) {
@@ -73,7 +65,7 @@ export function buildBoardBody(options: CreateBoardOptions | UpdateBoardOptions)
   const title = options.title ?? options.name
   const body: Record<string, unknown> = {}
   if (title !== undefined) {
-    if (!title) throw new Error('--title must not be empty')
+    if (!title) throw new Error('--title (or its deprecated alias --name) must not be empty')
     body.title = title
   }
   if (options.description !== undefined) {

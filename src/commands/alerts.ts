@@ -1,24 +1,19 @@
 import { Cli, z } from 'incur'
 import { createClient, requireApiKey } from '../lib/client'
 import { parseJsonArray, parseJsonObject } from '../lib/json'
+import {
+  buildPaginationParams,
+  paginationOptionsSchema,
+  type PaginationOptions,
+} from '../lib/pagination'
+
+export type { PaginationOptions }
 
 export const alerts = Cli.create('alerts', {
   description: 'Project alert commands — create, list, update, and delete alerts',
 })
 
 // ── List alerts ──
-
-export interface PaginationOptions {
-  page?: number
-  size?: number
-}
-
-function buildPaginationParams(options: PaginationOptions = {}) {
-  const params: Record<string, number> = {}
-  if (options.page !== undefined) params.page = options.page
-  if (options.size !== undefined) params.size = options.size
-  return params
-}
 
 export function listAlertsRun(options: PaginationOptions = {}) {
   requireApiKey()
@@ -28,10 +23,7 @@ export function listAlertsRun(options: PaginationOptions = {}) {
 
 alerts.command('list', {
   description: 'List all alerts for the project',
-  options: z.object({
-    page: z.coerce.number().optional().describe('Page number (1-indexed, default 1)'),
-    size: z.coerce.number().optional().describe('Page size (default 100, max 200)'),
-  }),
+  options: z.object(paginationOptionsSchema),
   examples: [{ description: 'List all project alerts' }],
   hint: 'Requires alerts:read scope on your API key.',
   run({ options }) {
@@ -63,16 +55,39 @@ alerts.command('get', {
 
 // ── Create an alert ──
 
-export interface CreateAlertOptions {
+export interface AlertBodyOptions {
   name: string
-  triggerType: 'event' | 'user' | string
+  triggerType: string
   triggerFilters?: string
   recipient?: string
   secret?: string
   slackPropertyKeys?: string
 }
 
-export function buildAlertBody(options: CreateAlertOptions | UpdateAlertOptions) {
+// Aliases kept for existing importers; create and update take the same body.
+export type CreateAlertOptions = AlertBodyOptions
+export type UpdateAlertOptions = AlertBodyOptions
+
+// Shared option fragment for `create` and `update` (same PUT/POST body).
+const alertBodyOptionsSchema = {
+  name: z.string().describe('Alert name'),
+  triggerType: z.enum(['event', 'user']).describe('Trigger type'),
+  triggerFilters: z
+    .string()
+    .optional()
+    .describe('JSON array of trigger filter objects'),
+  recipient: z
+    .string()
+    .optional()
+    .describe('JSON array of recipient objects'),
+  secret: z.string().optional().describe('Webhook secret for the alert'),
+  slackPropertyKeys: z
+    .string()
+    .optional()
+    .describe('JSON array of event/user property keys to include in Slack alerts'),
+}
+
+export function buildAlertBody(options: AlertBodyOptions) {
   const body: Record<string, unknown> = {
     name: options.name,
     trigger_type: options.triggerType,
@@ -112,23 +127,7 @@ export function createAlertRun(options: CreateAlertOptions) {
 
 alerts.command('create', {
   description: 'Create a new project alert',
-  options: z.object({
-    name: z.string().describe('Alert name'),
-    triggerType: z.enum(['event', 'user']).describe('Trigger type'),
-    triggerFilters: z
-      .string()
-      .optional()
-      .describe('JSON array of trigger filter objects'),
-    recipient: z
-      .string()
-      .optional()
-      .describe('JSON array of recipient objects'),
-    secret: z.string().optional().describe('Webhook secret for the alert'),
-    slackPropertyKeys: z
-      .string()
-      .optional()
-      .describe('JSON array of event/user property keys to include in Slack alerts'),
-  }),
+  options: z.object(alertBodyOptionsSchema),
   examples: [
     {
       options: { name: 'High value tx', triggerType: 'event' },
@@ -143,16 +142,7 @@ alerts.command('create', {
 
 // ── Update an alert ──
 
-export interface UpdateAlertOptions {
-  name: string
-  triggerType: 'event' | 'user' | string
-  triggerFilters?: string
-  recipient?: string
-  secret?: string
-  slackPropertyKeys?: string
-}
-
-export function updateAlertRun(alertId: string, options: UpdateAlertOptions) {
+export function updateAlertRun(alertId: string, options: AlertBodyOptions) {
   requireApiKey()
   const client = createClient()
   return client.put(
@@ -162,27 +152,12 @@ export function updateAlertRun(alertId: string, options: UpdateAlertOptions) {
 }
 
 alerts.command('update', {
-  description: 'Update an existing alert',
+  description:
+    'Update an existing alert (full replace — omitted options reset to defaults)',
   args: z.object({
     alertId: z.string().describe('Alert ID to update'),
   }),
-  options: z.object({
-    name: z.string().describe('Alert name'),
-    triggerType: z.enum(['event', 'user']).describe('Trigger type'),
-    triggerFilters: z
-      .string()
-      .optional()
-      .describe('JSON array of trigger filter objects'),
-    recipient: z
-      .string()
-      .optional()
-      .describe('JSON array of recipient objects'),
-    secret: z.string().optional().describe('Webhook secret for the alert'),
-    slackPropertyKeys: z
-      .string()
-      .optional()
-      .describe('JSON array of event/user property keys to include in Slack alerts'),
-  }),
+  options: z.object(alertBodyOptionsSchema),
   examples: [
     {
       args: { alertId: 'alert_abc123' },

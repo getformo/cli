@@ -67,7 +67,7 @@ describe('commands/analytics', function () {
         /--params must be a valid JSON object/,
       );
       expect(() => buildAnalyticsParams({ params: 'nope' })).to.throw(
-        /--params must be a valid JSON object/,
+        /--params must be valid JSON/,
       );
     });
 

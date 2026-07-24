@@ -1,23 +1,19 @@
 import { Cli, z } from 'incur'
 import { createClient, requireApiKey } from '../lib/client'
+import { parseJsonArray } from '../lib/json'
+import {
+  buildPaginationParams,
+  paginationOptionsSchema,
+  type PaginationOptions,
+} from '../lib/pagination'
+
+export type { PaginationOptions }
 
 export const segments = Cli.create('segments', {
   description: 'User segment commands — create, list, and delete audience segments',
 })
 
 // ── List segments ──
-
-export interface PaginationOptions {
-  page?: number
-  size?: number
-}
-
-function buildPaginationParams(options: PaginationOptions = {}) {
-  const params: Record<string, number> = {}
-  if (options.page !== undefined) params.page = options.page
-  if (options.size !== undefined) params.size = options.size
-  return params
-}
 
 export function listSegmentsRun(options: PaginationOptions = {}) {
   requireApiKey()
@@ -27,10 +23,7 @@ export function listSegmentsRun(options: PaginationOptions = {}) {
 
 segments.command('list', {
   description: 'List all user segments for the project',
-  options: z.object({
-    page: z.coerce.number().optional().describe('Page number (1-indexed, default 1)'),
-    size: z.coerce.number().optional().describe('Page size (default 100, max 200)'),
-  }),
+  options: z.object(paginationOptionsSchema),
   examples: [{ description: 'List all project segments' }],
   hint: 'Requires segments:read scope on your API key.',
   run({ options }) {
@@ -46,14 +39,9 @@ export interface CreateSegmentOptions {
 }
 
 export function buildCreateSegmentBody(options: CreateSegmentOptions) {
-  let parsedFilterSets: unknown
-  try {
-    parsedFilterSets = JSON.parse(options.filterSets)
-    if (!Array.isArray(parsedFilterSets)) {
-      throw new Error('not an array')
-    }
-  } catch {
-    throw new Error('--filter-sets must be a valid JSON array')
+  const parsedFilterSets = parseJsonArray(options.filterSets, '--filter-sets')
+  if (parsedFilterSets.some((item) => typeof item !== 'string')) {
+    throw new Error('--filter-sets must be a JSON array of strings')
   }
 
   return {

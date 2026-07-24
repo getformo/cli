@@ -15,6 +15,10 @@ export interface ImportWalletsOptions {
 }
 
 export function buildImportBody(options: ImportWalletsOptions) {
+  if (options.rows && options.addresses) {
+    throw new Error('Provide only one of --addresses or --rows')
+  }
+
   if (options.rows) {
     const rows = parseJsonArrayOfObjects(options.rows, '--rows')
     const addresses = rows.map((row) => row.address)
