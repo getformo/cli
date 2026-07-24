@@ -465,7 +465,7 @@ formo events ingest --event '{"type":"track","channel":"cli","version":"1","anon
 | Field | Type | Description |
 |---|---|---|
 | `field` | `string` | Typed path (see prefixes below) |
-| `op` | `string` | `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `nin`, `contains` (social fields only), `notEmpty` / `isEmpty` (value-less existence checks). Long-form spellings (`equals`, `greater`, `includes`, …) are deprecated aliases the API still accepts |
+| `op` | `string` | `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `nin`, `contains` (social fields only), `notEmpty` / `isEmpty` (value-less existence checks). Long-form spellings (`equals`, `greater`, `includes`, …) are retired — the API rejects them with a `400` naming the token |
 | `value` | `any` | Value to compare against |
 | `scope` | `string` | _(token filters only)_ `any` or `protocol` |
 | `appId` | `string` | _(token filters with `scope: protocol`)_ e.g. `aave-v3` |

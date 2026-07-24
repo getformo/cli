@@ -386,7 +386,7 @@ describe('commands / body builders', function () {
       ).to.not.throw();
     });
 
-    it('passes deprecated long-form op aliases through verbatim (server folds them to canonical)', function () {
+    it('passes long-form op tokens through verbatim (server rejects them with a 400 naming the token)', function () {
       const conds = parseSearchConditions(
         '[{"field":"users.net_worth_usd","op":"greater","value":10000}]',
       );

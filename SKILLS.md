@@ -111,7 +111,7 @@ formo profiles search --order-by tx_count --order-dir desc --page 2 --size 20 --
 | Property | Type | Description |
 |---|---|---|
 | `field` | `string` | **Typed path** — a bare name like `net_worth_usd` is silently ignored by the API |
-| `op` | `string` | `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `nin`, `contains` (social fields only), `notEmpty` / `isEmpty` (value-less existence checks). Long-form spellings (`equals`, `greater`, `includes`, …) are deprecated aliases the API still accepts |
+| `op` | `string` | `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `nin`, `contains` (social fields only), `notEmpty` / `isEmpty` (value-less existence checks). Long-form spellings (`equals`, `greater`, `includes`, …) are retired — the API rejects them with a `400` naming the token |
 | `value` | `any` | Value to compare against |
 | `scope` | `string` | _(token filters only)_ `any` or `protocol` |
 | `appId` | `string` | _(token filters with `scope: protocol`)_ e.g. `aave-v3` |
