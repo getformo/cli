@@ -116,9 +116,9 @@ Search wallet profiles with filters, sorting, and pagination. Returns a `Paginat
 formo profiles search --size 10
 formo profiles search --order-by net_worth_usd --order-dir desc --size 5
 formo profiles search --page 2 --size 20
-formo profiles search --conditions '[{"field":"users.net_worth_usd","op":"greater","value":10000}]' --size 20
-formo profiles search --conditions '[{"field":"users.net_worth_usd","op":"greater","value":10000},{"field":"users.volume","op":"greater","value":1000}]' --logic or --size 20
-formo profiles search --conditions '[{"field":"chains.1.balance","op":"greater","value":1000}]' --size 20
+formo profiles search --conditions '[{"field":"users.net_worth_usd","op":"gt","value":10000}]' --size 20
+formo profiles search --conditions '[{"field":"users.net_worth_usd","op":"gt","value":10000},{"field":"users.volume","op":"gt","value":1000}]' --logic or --size 20
+formo profiles search --conditions '[{"field":"chains.1.balance","op":"gt","value":1000}]' --size 20
 ```
 
 ### `profiles update <address>`
@@ -208,7 +208,7 @@ Get a single alert by ID.
 
 ```bash
 formo alerts create --name "High value tx" --trigger-type event \
-  --trigger-filters '[{"name":"event","operator":"equals","value":"transaction"}]' \
+  --trigger-filters '[{"name":"event","operator":"eq","value":"transaction"}]' \
   --recipient '[{"type":"email","value":["alerts@myapp.com"]}]'
 ```
 
@@ -401,7 +401,7 @@ Pre-built analytics pipes — the same data that powers the Formo dashboard — 
 |---|---|
 | `--date-from` | Inclusive start date `YYYY-MM-DD` (default: 7 days before `--date-to`) |
 | `--date-to` | Inclusive end date `YYYY-MM-DD` (default: today) |
-| `--filters` | JSON array of `[{field,op,value}]`. Use `in`/`notIn` with a pipe-delimited value (e.g. `"chrome\|firefox"`) |
+| `--filters` | JSON array of `[{field,op,value}]`. Use `in`/`nin` with a pipe-delimited value (e.g. `"chrome\|firefox"`) |
 | `--params` | JSON object of pipe-specific params merged into the query (e.g. `{"limit":10,"group_by":"device"}`) |
 
 ```bash
@@ -409,7 +409,7 @@ formo analytics kpis
 formo analytics kpis --date-from 2026-04-01 --date-to 2026-04-30 --params '{"group_by":"device"}'
 formo analytics funnel --date-from 2026-04-01 --date-to 2026-04-30 --params '{"steps":[{"type":"event","event":"page","name":"page::0","filters":[]},{"type":"track","event":"connect","name":"connect::1","filters":[]}],"window_seconds":86400}'
 formo analytics top_wallets --date-from 2026-04-01 --date-to 2026-04-30 --params '{"limit":10}'
-formo analytics retention --filters '[{"field":"location","op":"equals","value":"US"}]'
+formo analytics retention --filters '[{"field":"location","op":"eq","value":"US"}]'
 ```
 
 > Requires `query:read` scope. Run `formo analytics <pipe> --help` for the pipe-specific params accepted via `--params`.
@@ -453,8 +453,8 @@ formo events ingest --event '{"type":"track","channel":"cli","version":"1","anon
 
 ```json
 [
-  { "field": "users.net_worth_usd", "op": "greater", "value": 10000 },
-  { "field": "chains.1.balance", "op": "greaterOrEqual", "value": 1000 }
+  { "field": "users.net_worth_usd", "op": "gt", "value": 10000 },
+  { "field": "chains.1.balance", "op": "gte", "value": 1000 }
 ]
 ```
 
@@ -465,7 +465,7 @@ formo events ingest --event '{"type":"track","channel":"cli","version":"1","anon
 | Field | Type | Description |
 |---|---|---|
 | `field` | `string` | Typed path (see prefixes below) |
-| `op` | `string` | `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `nin` |
+| `op` | `string` | `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `nin`, `contains` (social fields only), `notEmpty` / `isEmpty` (value-less existence checks). Long-form spellings (`equals`, `greater`, `includes`, …) are deprecated aliases the API still accepts |
 | `value` | `any` | Value to compare against |
 | `scope` | `string` | _(token filters only)_ `any` or `protocol` |
 | `appId` | `string` | _(token filters with `scope: protocol`)_ e.g. `aave-v3` |

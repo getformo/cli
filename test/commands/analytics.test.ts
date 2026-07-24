@@ -21,10 +21,10 @@ describe('commands/analytics', function () {
 
     it('re-serializes a valid filters JSON array as a string', function () {
       const params = buildAnalyticsParams({
-        filters: '[{"field":"location","op":"equals","value":"US"}]',
+        filters: '[{"field":"location","op":"eq","value":"US"}]',
       });
       expect(params.filters).to.equal(
-        '[{"field":"location","op":"equals","value":"US"}]',
+        '[{"field":"location","op":"eq","value":"US"}]',
       );
     });
 

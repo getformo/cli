@@ -38,10 +38,10 @@ describe('commands / body builders', function () {
       const body = buildAlertBody({
         name: 'x',
         triggerType: 'event',
-        triggerFilters: '[{"name":"event","operator":"equals","value":"transaction"}]',
+        triggerFilters: '[{"name":"event","operator":"eq","value":"transaction"}]',
       });
       expect(body.trigger_filters).to.deep.equal([
-        { name: 'event', operator: 'equals', value: 'transaction' },
+        { name: 'event', operator: 'eq', value: 'transaction' },
       ]);
     });
 
@@ -372,7 +372,7 @@ describe('commands / body builders', function () {
   describe('parseSearchConditions()', function () {
     it('accepts conditions with typed field prefixes', function () {
       const conds = parseSearchConditions(
-        '[{"field":"users.net_worth_usd","op":"greater","value":10000},{"field":"chains.1.balance","op":"greaterOrEqual","value":1000}]',
+        '[{"field":"users.net_worth_usd","op":"gt","value":10000},{"field":"chains.1.balance","op":"gte","value":1000}]',
       );
       expect(conds).to.have.length(2);
       expect((conds[0] as { field: string }).field).to.equal('users.net_worth_usd');
@@ -381,20 +381,27 @@ describe('commands / body builders', function () {
     it('accepts apps., tokens., and labels. prefixes', function () {
       expect(() =>
         parseSearchConditions(
-          '[{"field":"apps.uniswap-v3.balance","op":"greater","value":0},{"field":"tokens.0xabc.balance","op":"greater","value":1},{"field":"labels.coinbase.verified_account","op":"equals","value":"true"}]',
+          '[{"field":"apps.uniswap-v3.balance","op":"gt","value":0},{"field":"tokens.0xabc.balance","op":"gt","value":1},{"field":"labels.coinbase.verified_account","op":"eq","value":"true"}]',
         ),
       ).to.not.throw();
     });
 
+    it('passes deprecated long-form op aliases through verbatim (server folds them to canonical)', function () {
+      const conds = parseSearchConditions(
+        '[{"field":"users.net_worth_usd","op":"greater","value":10000}]',
+      );
+      expect((conds[0] as { op: string }).op).to.equal('greater');
+    });
+
     it('rejects a bare (untyped) field — the silent-failure footgun', function () {
       expect(() =>
-        parseSearchConditions('[{"field":"net_worth_usd","op":"greater","value":10000}]'),
+        parseSearchConditions('[{"field":"net_worth_usd","op":"gt","value":10000}]'),
       ).to.throw(/must be a typed path/);
     });
 
     it('rejects a known field name without its prefix', function () {
       expect(() =>
-        parseSearchConditions('[{"field":"tx_count","op":"greater","value":5}]'),
+        parseSearchConditions('[{"field":"tx_count","op":"gt","value":5}]'),
       ).to.throw(/must be a typed path/);
     });
 
@@ -411,7 +418,7 @@ describe('commands / body builders', function () {
     });
 
     it('throws when an entry is missing a string field', function () {
-      expect(() => parseSearchConditions('[{"op":"greater","value":1}]')).to.throw(
+      expect(() => parseSearchConditions('[{"op":"gt","value":1}]')).to.throw(
         /must have a non-empty string "field"/,
       );
     });
