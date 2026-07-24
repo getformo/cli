@@ -38,10 +38,10 @@ describe('commands / body builders', function () {
       const body = buildAlertBody({
         name: 'x',
         triggerType: 'event',
-        triggerFilters: '[{"name":"event","operator":"equals","value":"transaction"}]',
+        triggerFilters: '[{"name":"event","operator":"eq","value":"transaction"}]',
       });
       expect(body.trigger_filters).to.deep.equal([
-        { name: 'event', operator: 'equals', value: 'transaction' },
+        { name: 'event', operator: 'eq', value: 'transaction' },
       ]);
     });
 
@@ -384,6 +384,13 @@ describe('commands / body builders', function () {
           '[{"field":"apps.uniswap-v3.balance","op":"gt","value":0},{"field":"tokens.0xabc.balance","op":"gt","value":1},{"field":"labels.coinbase.verified_account","op":"eq","value":"true"}]',
         ),
       ).to.not.throw();
+    });
+
+    it('passes deprecated long-form op aliases through verbatim (server folds them to canonical)', function () {
+      const conds = parseSearchConditions(
+        '[{"field":"users.net_worth_usd","op":"greater","value":10000}]',
+      );
+      expect((conds[0] as { op: string }).op).to.equal('greater');
     });
 
     it('rejects a bare (untyped) field — the silent-failure footgun', function () {

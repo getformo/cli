@@ -256,7 +256,9 @@ profiles.command('search', {
           'Chains: chains.balance or chains.{chain_id}.balance. ' +
           'Apps: apps.{app_id}.balance. Tokens: tokens.{address}.balance ' +
           '(optional "scope":"any"|"protocol" + "appId"). Labels: labels.{tag_id}. ' +
-          'op: eq, neq, gt, gte, lt, lte, in, nin.',
+          'op: eq, neq, gt, gte, lt, lte, in, nin, contains, notEmpty, isEmpty ' +
+          '(contains = substring, social fields only; notEmpty/isEmpty = value-less existence checks on string fields). ' +
+          'Long-form spellings (equals, notEquals, greater, greaterOrEqual, less, lessOrEqual, notIn, includes) are deprecated aliases the API still accepts.',
       ),
     logic: z
       .enum(['and', 'or'])

@@ -24,7 +24,7 @@ function loginGuide(): string {
     color.boldGreen("How to get your API key:"),
     "",
     `  ${color.white("1.")} Go to ${color.cyan(DASHBOARD_URL)}`,
-    `  ${color.white("2.")} Navigate to ${color.bold("Settings")} → ${color.bold("API Keys")}`,
+    `  ${color.white("2.")} Navigate to ${color.bold("Settings")} → ${color.bold("API")}`,
     `  ${color.white("3.")} Click ${color.bold('"Create API Key"')} and copy the key`,
     `  ${color.white("4.")} Run:`,
     "",
