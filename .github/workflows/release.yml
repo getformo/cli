@@ -13,7 +13,7 @@ jobs:
     # Keep this job on ubuntu-latest unless npm adds self-hosted provenance support.
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write  # Required to create the GitHub release
       id-token: write  # Required for OIDC trusted publishing
     # Workflow-context values are bound to env here and referenced as
     # shell variables ($TAG/$REPO/$COMMIT_SHA) in run: blocks instead of
