@@ -258,7 +258,7 @@ profiles.command('search', {
           '(optional "scope":"any"|"protocol" + "appId"). Labels: labels.{tag_id}. ' +
           'op: eq, neq, gt, gte, lt, lte, in, nin, contains, notEmpty, isEmpty ' +
           '(contains = substring, social fields only; notEmpty/isEmpty = value-less existence checks on string fields). ' +
-          'Long-form spellings (equals, notEquals, greater, greaterOrEqual, less, lessOrEqual, notIn, includes) are deprecated aliases the API still accepts.',
+          'Long-form spellings (equals, notEquals, greater, greaterOrEqual, less, lessOrEqual, notIn, includes) are retired; the API rejects them with a 400 naming the token.',
       ),
     logic: z
       .enum(['and', 'or'])
