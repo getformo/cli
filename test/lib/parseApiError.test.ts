@@ -72,7 +72,7 @@ describe('lib/client / parseApiError', function () {
   it('preserves details on validation errors', function () {
     const details = {
       'body.name': 'Required',
-      'body.conditions.0.operator': 'Expected one of: gt, lt, eq',
+      'body.filters.0.op': 'Expected one of: gt, lt, eq',
     };
     const err = parseApiError(
       makeAxiosError({
@@ -92,7 +92,7 @@ describe('lib/client / parseApiError', function () {
     expect(err.details).to.deep.equal(details);
     expect(err.message).to.include('Details: body.name: Required');
     expect(err.message).to.include(
-      'body.conditions.0.operator: Expected one of: gt, lt, eq',
+      'body.filters.0.op: Expected one of: gt, lt, eq',
     );
   });
 

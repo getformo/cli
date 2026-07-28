@@ -35,18 +35,24 @@ segments.command('list', {
 
 export interface CreateSegmentOptions {
   title: string
-  filterSets: string
+  filters: string
 }
 
 export function buildCreateSegmentBody(options: CreateSegmentOptions) {
-  const parsedFilterSets = parseJsonArray(options.filterSets, '--filter-sets')
-  if (parsedFilterSets.some((item) => typeof item !== 'string')) {
-    throw new Error('--filter-sets must be a JSON array of strings')
+  const filters = parseJsonArray(options.filters, '--filters')
+  for (const filter of filters) {
+    if (!filter || typeof filter !== 'object' || Array.isArray(filter)) {
+      throw new Error('--filters must be a JSON array of {field, op, value} objects')
+    }
+    const { field, op } = filter as { field?: unknown; op?: unknown }
+    if (typeof field !== 'string' || field.length === 0 || typeof op !== 'string' || op.length === 0) {
+      throw new Error('--filters: each entry requires non-empty string "field" and "op" properties')
+    }
   }
 
   return {
     title: options.title,
-    filterSets: parsedFilterSets,
+    filters,
   }
 }
 
@@ -60,17 +66,17 @@ segments.command('create', {
   description: 'Create a new user segment',
   options: z.object({
     title: z.string().describe('Segment title'),
-    filterSets: z
+    filters: z
       .string()
       .describe(
-        'JSON array of field::op::value filter strings defining the segment',
+        'JSON array of canonical {"field","op","value"} filter objects',
       ),
   }),
   examples: [
     {
       options: {
         title: 'Whales',
-        filterSets: '["net_worth_usd::gt::100000"]',
+        filters: '[{"field":"net_worth_usd","op":"gt","value":100000}]',
       },
       description: 'Create a high-value segment',
     },

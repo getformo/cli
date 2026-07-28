@@ -74,7 +74,7 @@ Use a direct lookup for one address or ENS name. Use search for cohorts, orderin
 formo profiles get vitalik.eth --expand labels,chains,tokens
 formo profiles search --order-by net_worth_usd --order-dir desc --size 10
 formo profiles search \
-  --conditions '[{"field":"users.net_worth_usd","op":"gt","value":10000}]' \
+  --filters '[{"field":"users.net_worth_usd","op":"gt","value":10000}]' \
   --size 20
 ```
 

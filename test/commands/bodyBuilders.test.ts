@@ -17,7 +17,7 @@ import {
   buildCreateLabelBody,
   buildDeleteLabelBody,
   buildUpdateProfileBody,
-  parseSearchConditions,
+  parseSearchFilters,
 } from '../../src/commands/profiles';
 import { buildCreateSegmentBody } from '../../src/commands/segments';
 import { buildIngestEventsBody } from '../../src/commands/events';
@@ -39,10 +39,10 @@ describe('commands / body builders', function () {
       const body = buildAlertBody({
         name: 'x',
         triggerType: 'event',
-        triggerFilters: '[{"name":"event","operator":"eq","value":"transaction"}]',
+        triggerFilters: '[{"field":"event","op":"eq","value":"transaction"}]',
       });
       expect(body.trigger_filters).to.deep.equal([
-        { name: 'event', operator: 'eq', value: 'transaction' },
+        { field: 'event', op: 'eq', value: 'transaction' },
       ]);
     });
 
@@ -232,14 +232,14 @@ describe('commands / body builders', function () {
   // ── Segments ──
 
   describe('buildCreateSegmentBody()', function () {
-    it('parses filterSets JSON into the body', function () {
+    it('parses filters JSON into the body', function () {
       const body = buildCreateSegmentBody({
         title: 'Whales',
-        filterSets: '["net_worth_usd::gt::100000"]',
+        filters: '[{"field":"net_worth_usd","op":"gt","value":100000}]',
       });
       expect(body).to.deep.equal({
         title: 'Whales',
-        filterSets: ['net_worth_usd::gt::100000'],
+        filters: [{ field: 'net_worth_usd', op: 'gt', value: 100000 }],
       });
     });
   });
@@ -368,11 +368,11 @@ describe('commands / body builders', function () {
     });
   });
 
-  // ── Profiles search conditions ──
+  // ── Profiles search filters ──
 
-  describe('parseSearchConditions()', function () {
-    it('accepts conditions with typed field prefixes', function () {
-      const conds = parseSearchConditions(
+  describe('parseSearchFilters()', function () {
+    it('accepts filters with typed field prefixes', function () {
+      const conds = parseSearchFilters(
         '[{"field":"users.net_worth_usd","op":"gt","value":10000},{"field":"chains.1.balance","op":"gte","value":1000}]',
       );
       expect(conds).to.have.length(2);
@@ -381,14 +381,14 @@ describe('commands / body builders', function () {
 
     it('accepts apps., tokens., and labels. prefixes', function () {
       expect(() =>
-        parseSearchConditions(
+        parseSearchFilters(
           '[{"field":"apps.uniswap-v3.balance","op":"gt","value":0},{"field":"tokens.0xabc.balance","op":"gt","value":1},{"field":"labels.coinbase.verified_account","op":"eq","value":"true"}]',
         ),
       ).to.not.throw();
     });
 
     it('passes long-form op tokens through verbatim (server rejects them with a 400 naming the token)', function () {
-      const conds = parseSearchConditions(
+      const conds = parseSearchFilters(
         '[{"field":"users.net_worth_usd","op":"greater","value":10000}]',
       );
       expect((conds[0] as { op: string }).op).to.equal('greater');
@@ -396,30 +396,30 @@ describe('commands / body builders', function () {
 
     it('rejects a bare (untyped) field — the silent-failure footgun', function () {
       expect(() =>
-        parseSearchConditions('[{"field":"net_worth_usd","op":"gt","value":10000}]'),
+        parseSearchFilters('[{"field":"net_worth_usd","op":"gt","value":10000}]'),
       ).to.throw(/must be a typed path/);
     });
 
     it('rejects a known field name without its prefix', function () {
       expect(() =>
-        parseSearchConditions('[{"field":"tx_count","op":"gt","value":5}]'),
+        parseSearchFilters('[{"field":"tx_count","op":"gt","value":5}]'),
       ).to.throw(/must be a typed path/);
     });
 
     it('throws on invalid JSON', function () {
-      expect(() => parseSearchConditions('not-json')).to.throw(
+      expect(() => parseSearchFilters('not-json')).to.throw(
         /valid JSON array of FilterCondition/,
       );
     });
 
     it('throws when not an array', function () {
-      expect(() => parseSearchConditions('{"field":"users.net_worth_usd"}')).to.throw(
+      expect(() => parseSearchFilters('{"field":"users.net_worth_usd"}')).to.throw(
         /valid JSON array of FilterCondition/,
       );
     });
 
     it('throws when an entry is missing a string field', function () {
-      expect(() => parseSearchConditions('[{"op":"gt","value":1}]')).to.throw(
+      expect(() => parseSearchFilters('[{"op":"gt","value":1}]')).to.throw(
         /must have a non-empty string "field"/,
       );
     });
@@ -460,14 +460,14 @@ describe('commands / body builders', function () {
   describe('buildCreateSegmentBody() validation', function () {
     it('rejects non-array JSON', function () {
       expect(() =>
-        buildCreateSegmentBody({ title: 'x', filterSets: '{"a":1}' }),
+        buildCreateSegmentBody({ title: 'x', filters: '{"a":1}' }),
       ).to.throw(/must be a valid JSON array/);
     });
 
-    it('rejects arrays containing non-string entries', function () {
+    it('rejects entries without canonical field/op keys', function () {
       expect(() =>
-        buildCreateSegmentBody({ title: 'x', filterSets: '[{"a":1}]' }),
-      ).to.throw(/JSON array of strings/);
+        buildCreateSegmentBody({ title: 'x', filters: '[{"a":1}]' }),
+      ).to.throw(/requires non-empty string "field" and "op"/);
     });
   });
 

@@ -110,16 +110,16 @@ Search wallet profiles with filters, sorting, and pagination. Returns a `Paginat
 | `--order-by` | `last_onchain`, `first_onchain`, `net_worth_usd`, `updated_at`, `tx_count`, `first_seen`, `last_seen`, `num_sessions`, `revenue`, `volume`, `points` |
 | `--order-dir` | `asc` or `desc` |
 | `--expand` | Comma-separated fields to expand |
-| `--conditions` | JSON array of `FilterCondition` objects (see below) |
-| `--logic` | Combine conditions with `and` (default) or `or` |
+| `--filters` | JSON array of `FilterCondition` objects (see below) |
+| `--logic` | Combine filters with `and` (default) or `or` |
 
 ```bash
 formo profiles search --size 10
 formo profiles search --order-by net_worth_usd --order-dir desc --size 5
 formo profiles search --page 2 --size 20
-formo profiles search --conditions '[{"field":"users.net_worth_usd","op":"gt","value":10000}]' --size 20
-formo profiles search --conditions '[{"field":"users.net_worth_usd","op":"gt","value":10000},{"field":"users.volume","op":"gt","value":1000}]' --logic or --size 20
-formo profiles search --conditions '[{"field":"chains.1.balance","op":"gt","value":1000}]' --size 20
+formo profiles search --filters '[{"field":"users.net_worth_usd","op":"gt","value":10000}]' --size 20
+formo profiles search --filters '[{"field":"users.net_worth_usd","op":"gt","value":10000},{"field":"users.volume","op":"gt","value":1000}]' --logic or --size 20
+formo profiles search --filters '[{"field":"chains.1.balance","op":"gt","value":1000}]' --size 20
 ```
 
 ### Lifecycle tuning (advanced)
@@ -224,7 +224,7 @@ Get a single alert by ID.
 
 ```bash
 formo alerts create --name "High value tx" --trigger-type event \
-  --trigger-filters '[{"name":"event","operator":"eq","value":"transaction"}]' \
+  --trigger-filters '[{"field":"event","op":"eq","value":"transaction"}]' \
   --recipient '[{"type":"email","value":["alerts@myapp.com"]}]'
 ```
 
@@ -389,10 +389,10 @@ List all user segments.
 | Option | Description |
 |---|---|
 | `--title` | Segment title |
-| `--filter-sets` | JSON array of `field::op::value` filter strings defining the segment |
+| `--filters` | JSON array of canonical `{field, op, value}` filter objects |
 
 ```bash
-formo segments create --title "Whales" --filter-sets '["net_worth_usd::gt::100000"]'
+formo segments create --title "Whales" --filters '[{"field":"net_worth_usd","op":"gt","value":100000}]'
 ```
 
 ### `segments delete <segmentId>`
@@ -483,7 +483,7 @@ formo events ingest --events '[{"type":"track","event":"First"},{"type":"track",
 
 ## FilterCondition reference
 
-`profiles search --conditions` accepts a JSON array of filter condition objects:
+`profiles search --filters` accepts a JSON array of filter condition objects:
 
 ```json
 [
@@ -512,7 +512,7 @@ formo events ingest --events '[{"type":"track","event":"First"},{"type":"track",
 | `tokens.` | `tokens.0xA0b8…48.balance` |
 | `labels.` | `labels.coinbase.verified_account` |
 
-Combine multiple conditions with `--logic and` (default) or `--logic or`.
+Combine multiple filters with `--logic and` (default) or `--logic or`.
 
 ---
 

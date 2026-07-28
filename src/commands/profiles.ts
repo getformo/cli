@@ -132,7 +132,7 @@ export interface SearchProfilesOptions extends LifecycleThresholdOptions {
   orderBy?: string
   orderDir?: string
   expand?: string
-  conditions?: string
+  filters?: string
   logic?: 'and' | 'or'
 }
 
@@ -154,32 +154,32 @@ const CONDITION_FIELD_PREFIXES = new Set([
 ])
 
 /**
- * Parse and validate the --conditions JSON. Ensures it is an array of
+ * Parse and validate the --filters JSON. Ensures it is an array of
  * `{ field, op, value }` objects whose `field` is a typed path (e.g.
  * `users.net_worth_usd`) — a bare name like `net_worth_usd` is silently
  * dropped by the API, so it is rejected here. Exported for unit testing.
  */
-export function parseSearchConditions(raw: string): unknown[] {
+export function parseSearchFilters(raw: string): unknown[] {
   let parsed: unknown
   try {
     parsed = JSON.parse(raw)
   } catch {
-    throw new Error('--conditions must be a valid JSON array of FilterCondition objects')
+    throw new Error('--filters must be a valid JSON array of FilterCondition objects')
   }
   if (!Array.isArray(parsed)) {
-    throw new Error('--conditions must be a valid JSON array of FilterCondition objects')
+    throw new Error('--filters must be a valid JSON array of FilterCondition objects')
   }
   for (const cond of parsed) {
     if (!cond || typeof cond !== 'object' || Array.isArray(cond)) {
-      throw new Error('--conditions: each entry must be an object with field, op, value')
+      throw new Error('--filters: each entry must be an object with field, op, value')
     }
     const field = (cond as { field?: unknown }).field
     if (typeof field !== 'string' || field.length === 0) {
-      throw new Error('--conditions: each entry must have a non-empty string "field"')
+      throw new Error('--filters: each entry must have a non-empty string "field"')
     }
     if (!field.includes('.') || !CONDITION_FIELD_PREFIXES.has(field.split('.')[0])) {
       throw new Error(
-        `--conditions: field "${field}" must be a typed path — prefix it with ` +
+        `--filters: field "${field}" must be a typed path — prefix it with ` +
           'users., chains., apps., tokens., or labels. ' +
           '(a bare name is silently ignored by the API and returns the entire unfiltered dataset)',
       )
@@ -203,15 +203,15 @@ export function searchProfilesRun(options: SearchProfilesOptions) {
   addLifecycleThresholdParams(params, options)
 
   let body: object | undefined
-  if (options.conditions) {
+  if (options.filters) {
     body = {
-      conditions: parseSearchConditions(options.conditions),
+      filters: parseSearchFilters(options.filters),
       logic: options.logic ?? 'and',
     }
   }
 
   // INTENTIONAL: the Formo search API is `GET /v0/profiles` with the
-  // `{ conditions, logic }` filter object in the *request body* (see
+  // `{ filters, logic }` filter object in the *request body* (see
   // docs.formo.so/api/profiles/search — it has a "Request Body (Filters)"
   // section under a GET endpoint). This GET-with-body shape is the
   // documented, server-supported contract. Do NOT "fix" it to POST — that
@@ -254,7 +254,7 @@ profiles.command('search', {
       .describe('Field to sort by'),
     orderDir: z.enum(['asc', 'desc']).optional().describe('Sort direction'),
     expand: z.string().optional().describe('Comma-separated fields to expand'),
-    conditions: z
+    filters: z
       .string()
       .optional()
       .describe(
@@ -273,7 +273,7 @@ profiles.command('search', {
     logic: z
       .enum(['and', 'or'])
       .optional()
-      .describe('Logic operator for combining conditions: "and" (default) or "or"'),
+      .describe('Logic operator for combining filters: "and" (default) or "or"'),
     ...lifecycleThresholdOptions,
   }),
   examples: [
@@ -288,14 +288,14 @@ profiles.command('search', {
     },
     {
       options: {
-        conditions: '[{"field":"users.net_worth_usd","op":"gt","value":10000}]',
+        filters: '[{"field":"users.net_worth_usd","op":"gt","value":10000}]',
         size: 20,
       },
       description: 'Search profiles with net worth > $10k',
     },
     {
       options: {
-        conditions:
+        filters:
           '[{"field":"users.net_worth_usd","op":"gt","value":10000},{"field":"users.volume","op":"gt","value":1000}]',
         logic: 'or',
         size: 20,
@@ -304,7 +304,7 @@ profiles.command('search', {
     },
     {
       options: {
-        conditions: '[{"field":"chains.1.balance","op":"gt","value":1000}]',
+        filters: '[{"field":"chains.1.balance","op":"gt","value":1000}]',
         size: 20,
       },
       description: 'Search profiles with > $1k balance on Ethereum (chain 1)',

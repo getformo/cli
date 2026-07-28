@@ -75,7 +75,7 @@ const alertBodyOptionsSchema = {
   triggerFilters: z
     .string()
     .optional()
-    .describe('JSON array of trigger filter objects'),
+    .describe('JSON array of canonical {"field","op","value"} trigger filters'),
   recipient: z
     .string()
     .optional()
