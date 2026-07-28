@@ -389,7 +389,11 @@ List all user segments.
 | Option | Description |
 |---|---|
 | `--title` | Segment title |
-| `--filter-sets` | JSON array of filter set strings defining the segment |
+| `--filter-sets` | JSON array of `field::op::value` filter strings defining the segment |
+
+```bash
+formo segments create --title "Whales" --filter-sets '["net_worth_usd::gt::100000"]'
+```
 
 ### `segments delete <segmentId>`
 Delete a user segment.
@@ -430,9 +434,10 @@ formo analytics kpis --date-from 2026-04-01 --date-to 2026-04-30 --params '{"gro
 formo analytics funnel --date-from 2026-04-01 --date-to 2026-04-30 --params '{"steps":[{"type":"event","event":"page","name":"page::0","filters":[]},{"type":"track","event":"connect","name":"connect::1","filters":[]}],"window_seconds":86400}'
 formo analytics top_wallets --date-from 2026-04-01 --date-to 2026-04-30 --params '{"limit":10}'
 formo analytics retention --filters '[{"field":"location","op":"eq","value":"US"}]'
+formo analytics kpis --filters '[{"field":"page","op":"eq","value":"/pricing"}]' --params '{"page_scope":"page"}'
 ```
 
-> Requires `query:read` scope. Run `formo analytics <pipe> --help` for the pipe-specific params accepted via `--params`.
+`page_scope` accepts `page` (default) or `session` on KPI, revenue, and `top_*` endpoints. It only changes requests with a `page` filter. Requires `query:read` scope. Run `formo analytics <pipe> --help` for pipe-specific params accepted via `--params`.
 
 ---
 

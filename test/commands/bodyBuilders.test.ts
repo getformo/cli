@@ -235,11 +235,11 @@ describe('commands / body builders', function () {
     it('parses filterSets JSON into the body', function () {
       const body = buildCreateSegmentBody({
         title: 'Whales',
-        filterSets: '["net_worth_usd > 100000"]',
+        filterSets: '["net_worth_usd::gt::100000"]',
       });
       expect(body).to.deep.equal({
         title: 'Whales',
-        filterSets: ['net_worth_usd > 100000'],
+        filterSets: ['net_worth_usd::gt::100000'],
       });
     });
   });

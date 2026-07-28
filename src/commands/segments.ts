@@ -62,13 +62,15 @@ segments.command('create', {
     title: z.string().describe('Segment title'),
     filterSets: z
       .string()
-      .describe('JSON array of filter set strings defining the segment'),
+      .describe(
+        'JSON array of field::op::value filter strings defining the segment',
+      ),
   }),
   examples: [
     {
       options: {
         title: 'Whales',
-        filterSets: '["net_worth_usd > 100000"]',
+        filterSets: '["net_worth_usd::gt::100000"]',
       },
       description: 'Create a high-value segment',
     },

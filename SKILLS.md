@@ -222,9 +222,12 @@ formo analytics top_wallets --date-from 2026-04-01 --date-to 2026-04-30 --params
 
 # Retention filtered to US visitors
 formo analytics retention --filters '[{"field":"location","op":"eq","value":"US"}]'
+
+# Page-scoped KPIs for the pricing page
+formo analytics kpis --filters '[{"field":"page","op":"eq","value":"/pricing"}]' --params '{"page_scope":"page"}'
 ```
 
-Each pipe accepts pipe-specific params via `--params` (see each command's `--help`): e.g. `funnel` → `steps`, `window_seconds`, `funnel_type`, `group_by`, `limit`, `attribution`; `kpis` → `group_by`, `limit`; `top_*` → `limit`, `offset`.
+Each pipe accepts pipe-specific params via `--params` (see each command's `--help`): e.g. `funnel` → `steps`, `window_seconds`, `funnel_type`, `group_by`, `limit`, `attribution`; `kpis` → `group_by`, `limit`; `top_*` → `limit`, `offset`. `page_scope` accepts `page` (default) or `session` on KPI, revenue, and `top_*` endpoints, and only changes requests that include a `page` filter.
 
 ---
 
@@ -575,13 +578,13 @@ formo segments create --title <title> --filter-sets '<json>'
 | Option | Description |
 |---|---|
 | `--title` | Segment title |
-| `--filter-sets` | JSON array of filter set strings defining the segment |
+| `--filter-sets` | JSON array of `field::op::value` filter strings defining the segment |
 
 > Requires `segments:write` scope.
 
 **Examples:**
 ```bash
-formo segments create --title "Whales" --filter-sets '["net_worth_usd > 100000"]'
+formo segments create --title "Whales" --filter-sets '["net_worth_usd::gt::100000"]'
 ```
 
 ### Delete a segment

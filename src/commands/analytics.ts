@@ -139,7 +139,7 @@ const sharedOptions = z.object({
     .optional()
     .describe(
       'JSON object of pipe-specific params merged into the query, e.g. ' +
-        '{"limit":10,"group_by":"device"} or funnel ' +
+        '{"limit":10,"group_by":"device"}, {"page_scope":"session"} for a page filter, or funnel ' +
         '{"steps":[{"type":"event","event":"page","name":"page::0","filters":[]}]}. ' +
         'May not set date_from/date_to/filters; use the dedicated --date-from/--date-to/--filters flags.',
     ),
