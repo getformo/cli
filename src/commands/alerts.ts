@@ -1,5 +1,6 @@
 import { Cli, z } from 'incur'
 import { createClient, requireApiKey } from '../lib/client'
+import { isCanonicalFilterOperator } from '../lib/filters'
 import { parseJsonArray, parseJsonObject } from '../lib/json'
 import {
   buildPaginationParams,
@@ -95,10 +96,46 @@ export function buildAlertBody(options: AlertBodyOptions) {
   }
 
   if (options.triggerFilters) {
-    body.trigger_filters = parseJsonArray(
+    const triggerFilters = parseJsonArray(
       options.triggerFilters,
       '--trigger-filters',
     )
+    for (const filter of triggerFilters) {
+      if (!filter || typeof filter !== 'object' || Array.isArray(filter)) {
+        throw new Error(
+          '--trigger-filters must be a JSON array of {field, op, value} objects',
+        )
+      }
+      const record = filter as Record<string, unknown>
+      if (
+        typeof record.field !== 'string' ||
+        record.field.length === 0 ||
+        typeof record.value !== 'string'
+      ) {
+        throw new Error(
+          '--trigger-filters: each entry requires string "field" and "value"',
+        )
+      }
+      if (
+        record.op !== undefined &&
+        record.op !== '' &&
+        !isCanonicalFilterOperator(record.op)
+      ) {
+        throw new Error(
+          '--trigger-filters: "op" must use the canonical filter vocabulary',
+        )
+      }
+      if (
+        Object.keys(record).some(
+          (key) => !['field', 'op', 'value', 'numericThreshold'].includes(key),
+        )
+      ) {
+        throw new Error(
+          '--trigger-filters entries may only contain field, op, value, and numericThreshold',
+        )
+      }
+    }
+    body.trigger_filters = triggerFilters
   }
 
   if (options.recipient) {

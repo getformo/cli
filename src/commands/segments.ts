@@ -1,5 +1,9 @@
 import { Cli, z } from 'incur'
 import { createClient, requireApiKey } from '../lib/client'
+import {
+  isCanonicalFilterOperator,
+  isValuelessFilterOperator,
+} from '../lib/filters'
 import { parseJsonArray } from '../lib/json'
 import {
   buildPaginationParams,
@@ -35,18 +39,71 @@ segments.command('list', {
 
 export interface CreateSegmentOptions {
   title: string
-  filterSets: string
+  filters: string
+}
+
+const SEGMENT_FILTER_KEYS = new Set(['field', 'op', 'value'])
+
+function isSegmentFilterValue(value: unknown): boolean {
+  return (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    (Array.isArray(value) &&
+      value.every(
+        (item) => typeof item === 'string' || typeof item === 'number',
+      ))
+  )
 }
 
 export function buildCreateSegmentBody(options: CreateSegmentOptions) {
-  const parsedFilterSets = parseJsonArray(options.filterSets, '--filter-sets')
-  if (parsedFilterSets.some((item) => typeof item !== 'string')) {
-    throw new Error('--filter-sets must be a JSON array of strings')
+  const filters = parseJsonArray(options.filters, '--filters')
+  if (filters.length === 0) {
+    throw new Error('--filters must contain at least one filter')
+  }
+
+  for (const filter of filters) {
+    if (!filter || typeof filter !== 'object' || Array.isArray(filter)) {
+      throw new Error(
+        '--filters must be a JSON array of {field, op, value} objects',
+      )
+    }
+    const record = filter as Record<string, unknown>
+    if (Object.keys(record).some((key) => !SEGMENT_FILTER_KEYS.has(key))) {
+      throw new Error(
+        '--filters entries may only contain field, op, and value',
+      )
+    }
+    if (typeof record.field !== 'string' || record.field.length === 0) {
+      throw new Error('--filters: each entry requires a non-empty string "field"')
+    }
+    if (!isCanonicalFilterOperator(record.op)) {
+      throw new Error('--filters: each entry requires a canonical "op"')
+    }
+    if (
+      !isValuelessFilterOperator(record.op) &&
+      (record.value === undefined ||
+        record.value === null ||
+        !isSegmentFilterValue(record.value))
+    ) {
+      throw new Error(
+        '--filters: "value" is required for every operator except notEmpty/isEmpty',
+      )
+    }
+    if (
+      record.value !== undefined &&
+      record.value !== null &&
+      !isSegmentFilterValue(record.value)
+    ) {
+      throw new Error(
+        '--filters: "value" must be a string, number, boolean, or string/number array',
+      )
+    }
   }
 
   return {
     title: options.title,
-    filterSets: parsedFilterSets,
+    filters,
   }
 }
 
@@ -60,15 +117,18 @@ segments.command('create', {
   description: 'Create a new user segment',
   options: z.object({
     title: z.string().describe('Segment title'),
-    filterSets: z
+    filters: z
       .string()
-      .describe('JSON array of filter set strings defining the segment'),
+      .describe(
+        'JSON array of canonical filter objects: [{"field","op","value"}]',
+      ),
   }),
   examples: [
     {
       options: {
         title: 'Whales',
-        filterSets: '["net_worth_usd > 100000"]',
+        filters:
+          '[{"field":"net_worth_usd","op":"gt","value":"100000"}]',
       },
       description: 'Create a high-value segment',
     },

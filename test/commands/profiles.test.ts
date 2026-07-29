@@ -46,16 +46,16 @@ describe('commands/profiles', function () {
       expect(result).to.exist;
     });
 
-    it('throws on invalid conditions JSON', function () {
+    it('throws on invalid filters JSON', function () {
       expect(() =>
-        searchProfilesRun({ conditions: 'not-json' }),
-      ).to.throw(/conditions/);
+        searchProfilesRun({ filters: 'not-json' }),
+      ).to.throw(/filters/);
     });
 
-    it('throws when conditions is not a JSON array', function () {
+    it('throws when filters is not a JSON array', function () {
       expect(() =>
-        searchProfilesRun({ conditions: '{"field":"x"}' }),
-      ).to.throw(/conditions/);
+        searchProfilesRun({ filters: '{"field":"x"}' }),
+      ).to.throw(/filters/);
     });
   });
 
