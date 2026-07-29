@@ -4,6 +4,7 @@ import {
   hasTinybirdMembershipDelimiter,
   isCanonicalFilterOperator,
   isCanonicalFilterValue,
+  isEmptyMembershipArray,
   isValuelessFilterOperator,
 } from '../lib/filters'
 import { parseJsonObject } from '../lib/json'
@@ -86,6 +87,9 @@ function validateAnalyticsFilter(
   }
   if (!isCanonicalFilterOperator(record.op)) {
     throw new Error(`${path} requires a canonical "op"`)
+  }
+  if (isEmptyMembershipArray(record.value)) {
+    throw new Error(`${path}: membership arrays cannot be empty`)
   }
   if (
     !isValuelessFilterOperator(record.op) &&

@@ -25,5 +25,14 @@ describe('commands/segments', function () {
       expect(() => createSegmentRun({ title: 'x', filters: '5' })).to.throw(/filters/);
       expect(() => createSegmentRun({ title: 'x', filters: '"foo"' })).to.throw(/filters/);
     });
+
+    it('rejects empty membership arrays', function () {
+      expect(() =>
+        createSegmentRun({
+          title: 'x',
+          filters: '[{"field":"browser","op":"in","value":[]}]',
+        }),
+      ).to.throw(/membership arrays cannot be empty/);
+    });
   });
 });

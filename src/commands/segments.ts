@@ -4,6 +4,7 @@ import {
   hasTinybirdMembershipDelimiter,
   isCanonicalFilterValue,
   isCanonicalFilterOperator,
+  isEmptyMembershipArray,
   isValuelessFilterOperator,
 } from '../lib/filters'
 import { parseJsonArray } from '../lib/json'
@@ -69,6 +70,9 @@ export function buildCreateSegmentBody(options: CreateSegmentOptions) {
     }
     if (!isCanonicalFilterOperator(record.op)) {
       throw new Error('--filters: each entry requires a canonical "op"')
+    }
+    if (isEmptyMembershipArray(record.value)) {
+      throw new Error('--filters: membership arrays cannot be empty')
     }
     if (
       !isValuelessFilterOperator(record.op) &&
