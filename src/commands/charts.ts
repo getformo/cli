@@ -120,11 +120,13 @@ const chartBodyOptions = z.object({
   steps: z
     .string()
     .optional()
-    .describe('JSON array of funnel/user-path step objects'),
+    .describe('JSON array of funnel step objects'),
   settings: z
     .string()
     .optional()
-    .describe('JSON object of type-specific chart settings'),
+    .describe(
+      'JSON object of type-specific chart settings (for example, user_paths anchors/maxSteps/nodesPerStep or retention entryFilter/retentionFilter)',
+    ),
 })
 
 // ── List charts for a board ──
