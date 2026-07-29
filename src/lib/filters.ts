@@ -32,10 +32,15 @@ export function isCanonicalFilterValue(value: unknown): boolean {
     typeof value === 'number' ||
     typeof value === 'boolean' ||
     (Array.isArray(value) &&
+      value.length > 0 &&
       value.every(
         (item) => typeof item === 'string' || typeof item === 'number',
       ))
   )
+}
+
+export function isEmptyMembershipArray(value: unknown): boolean {
+  return Array.isArray(value) && value.length === 0
 }
 
 export function hasTinybirdMembershipDelimiter(value: unknown): boolean {

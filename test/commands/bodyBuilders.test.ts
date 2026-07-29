@@ -455,6 +455,14 @@ describe('commands / body builders', function () {
         parseSearchFilters('[{"field":"users.browser","op":"notEmpty"}]'),
       ).to.not.throw();
     });
+
+    it('rejects empty membership arrays', function () {
+      expect(() =>
+        parseSearchFilters(
+          '[{"field":"users.browser","op":"in","value":[]}]',
+        ),
+      ).to.throw(/membership arrays cannot be empty/);
+    });
   });
 
   // ── Input validation guards ──

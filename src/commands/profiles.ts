@@ -2,6 +2,7 @@ import { Cli, z } from 'incur'
 import { createClient, requireApiKey } from '../lib/client'
 import {
   isCanonicalFilterOperator,
+  isEmptyMembershipArray,
   isValuelessFilterOperator,
 } from '../lib/filters'
 import {
@@ -193,6 +194,9 @@ export function parseSearchFilters(raw: string): unknown[] {
       throw new Error(
         '--filters: each entry must use a canonical "op" (eq, neq, gt, lt, gte, lte, in, nin, startsWith, endsWith, contains, notEmpty, or isEmpty)',
       )
+    }
+    if (isEmptyMembershipArray(record.value)) {
+      throw new Error('--filters: membership arrays cannot be empty')
     }
     if (
       !isValuelessFilterOperator(record.op) &&

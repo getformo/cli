@@ -119,6 +119,28 @@ describe('commands/analytics', function () {
       ).to.throw(/cannot contain "\|"/);
     });
 
+    it('rejects empty membership arrays, including nested filters', function () {
+      expect(() =>
+        buildAnalyticsParams({
+          filters: JSON.stringify([
+            { field: 'browser', op: 'in', value: [] },
+          ]),
+        }),
+      ).to.throw(/membership arrays cannot be empty/);
+      expect(() =>
+        buildAnalyticsParams({
+          filters: JSON.stringify([
+            {
+              field: 'event',
+              op: 'eq',
+              value: 'purchase',
+              filters: [{ field: 'sku', op: 'nin', value: [] }],
+            },
+          ]),
+        }),
+      ).to.throw(/membership arrays cannot be empty/);
+    });
+
     it('merges primitive params through unchanged', function () {
       const params = buildAnalyticsParams({
         params: '{"limit":10,"group_by":"device"}',
