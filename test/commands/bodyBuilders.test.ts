@@ -530,6 +530,16 @@ describe('commands / body builders', function () {
         { field: 'browser', op: 'notEmpty' },
       ]);
     });
+
+    it('rejects literal pipes in membership array members', function () {
+      expect(() =>
+        buildCreateSegmentBody({
+          title: 'x',
+          filters:
+            '[{"field":"browser","op":"in","value":["Chrome|Mobile","Safari"]}]',
+        }),
+      ).to.throw(/cannot contain "\|"/);
+    });
   });
 
   describe('buildImportBody() mutually exclusive flags', function () {
