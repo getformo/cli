@@ -308,10 +308,14 @@ formo charts create --board-id brd_123 --title "Daily Active Users" \
   --x-axis date --y-axis users
 
 formo charts create --board-id brd_123 --body '{"title":"Recent Events","chart_type":"table","query":"SELECT * FROM events LIMIT 10"}'
+
+formo charts create --board-id brd_123 --title "Post-connect paths" \
+  --chart-type user_paths \
+  --settings '{"anchors":[{"type":"event","event":"connect"}],"maxSteps":5,"nodesPerStep":3}'
 ```
 
 ### `charts update <chartId> --board-id <boardId> [options]`
-Update a chart. Accepts the same options as `create`: a raw `--body '<json>'` and/or typed flags (`--title`, `--chart-type`, `--query`, `--description`, `--x-axis`, `--y-axis`, `--group-by`, `--steps`, `--settings`). Typed flags override matching `--body` keys.
+Update a chart. Accepts the same options as `create`: a raw `--body '<json>'` and/or typed flags (`--title`, `--chart-type`, `--query`, `--description`, `--x-axis`, `--y-axis`, `--group-by`, `--steps`, `--settings`). `--steps` is for funnel steps. User Paths use `--settings` with `anchors` and optional `maxSteps` / `nodesPerStep`; retention settings require an `entryFilter` key. Typed flags override matching `--body` keys.
 
 ```bash
 formo charts update chart_abc123 --board-id brd_123 --title "Renamed chart"

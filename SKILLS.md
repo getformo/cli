@@ -424,7 +424,8 @@ formo charts create --board-id <boardId> [--body '<json>' | typed chart options]
 | `--chart-type` | `table`, `number`, `funnel`, `bar`, `line`, `area`, `pie`, `stacked`, `user_paths`, `retention` |
 | `--query` | SQL query for SQL-backed charts |
 | `--x-axis` / `--y-axis` / `--group-by` | Chart encodings |
-| `--steps` / `--settings` | JSON for funnel/user-path/retention chart settings |
+| `--steps` | JSON array of funnel steps |
+| `--settings` | JSON settings object. User Paths require `anchors` and accept `maxSteps` / `nodesPerStep`; retention requires an `entryFilter` key |
 
 > Requires `boards:write` scope.
 
