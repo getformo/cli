@@ -1,5 +1,11 @@
 import { Cli, z } from 'incur'
 import { createClient, requireApiKey } from '../lib/client'
+import {
+  hasTinybirdMembershipDelimiter,
+  isCanonicalFilterOperator,
+  isCanonicalFilterValue,
+  isValuelessFilterOperator,
+} from '../lib/filters'
 import { parseJsonObject } from '../lib/json'
 
 export const analytics = Cli.create('analytics', {
@@ -50,6 +56,71 @@ const RESERVED_PARAM_KEYS = new Set([
   'dateTo',
   'filters',
 ])
+
+const ANALYTICS_FILTER_KEYS = new Set(['field', 'op', 'value', 'filters'])
+const ANALYTICS_NESTED_FILTER_KEYS = new Set(['field', 'op', 'value'])
+
+function validateAnalyticsFilter(
+  filter: unknown,
+  path: string,
+  allowNested: boolean,
+): void {
+  if (!filter || typeof filter !== 'object' || Array.isArray(filter)) {
+    throw new Error(`${path} must be a {field, op, value} object`)
+  }
+
+  const record = filter as Record<string, unknown>
+  if (!allowNested && record.filters !== undefined) {
+    throw new Error(`${path}.filters must be a one-level array of leaf filters`)
+  }
+  const allowedKeys = allowNested
+    ? ANALYTICS_FILTER_KEYS
+    : ANALYTICS_NESTED_FILTER_KEYS
+  if (Object.keys(record).some((key) => !allowedKeys.has(key))) {
+    throw new Error(
+      `${path} may only contain field, op, value${allowNested ? ', and filters' : ''}`,
+    )
+  }
+  if (typeof record.field !== 'string' || record.field.length === 0) {
+    throw new Error(`${path} requires a non-empty string "field"`)
+  }
+  if (!isCanonicalFilterOperator(record.op)) {
+    throw new Error(`${path} requires a canonical "op"`)
+  }
+  if (
+    !isValuelessFilterOperator(record.op) &&
+    (record.value === undefined ||
+      record.value === null ||
+      !isCanonicalFilterValue(record.value))
+  ) {
+    throw new Error(
+      `${path}: "value" is required for every operator except notEmpty/isEmpty`,
+    )
+  }
+  if (
+    record.value !== undefined &&
+    record.value !== null &&
+    !isCanonicalFilterValue(record.value)
+  ) {
+    throw new Error(
+      `${path}: "value" must be a string, number, boolean, or string/number array`,
+    )
+  }
+  if (hasTinybirdMembershipDelimiter(record.value)) {
+    throw new Error(
+      `${path}: array string members cannot contain "|" because it is the Tinybird membership separator`,
+    )
+  }
+
+  if (record.filters !== undefined) {
+    if (!allowNested || !Array.isArray(record.filters)) {
+      throw new Error(`${path}.filters must be a one-level array of leaf filters`)
+    }
+    record.filters.forEach((nested, index) =>
+      validateAnalyticsFilter(nested, `${path}.filters[${index}]`, false),
+    )
+  }
+}
 
 /**
  * Build the query-string params for an analytics pipe request.
@@ -106,6 +177,9 @@ export function buildAnalyticsParams(
         '--filters must be a valid JSON array of {field,op,value} objects',
       )
     }
+    parsed.forEach((filter, index) =>
+      validateAnalyticsFilter(filter, `--filters[${index}]`, true),
+    )
     out.filters = JSON.stringify(parsed)
   }
 
@@ -132,7 +206,7 @@ const sharedOptions = z.object({
     .optional()
     .describe(
       'JSON array of filter conditions: [{"field","op","value"}]. ' +
-        'Use op "in"/"nin" with an array value (e.g. ["chrome","firefox"]); pipe-delimited strings are also accepted.',
+        'Use op "in"/"nin" with an array value (e.g. ["chrome","firefox"]); pipe-delimited strings are also accepted. Array string members cannot contain "|".',
     ),
   params: z
     .string()

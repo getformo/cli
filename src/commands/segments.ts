@@ -1,6 +1,8 @@
 import { Cli, z } from 'incur'
 import { createClient, requireApiKey } from '../lib/client'
 import {
+  hasTinybirdMembershipDelimiter,
+  isCanonicalFilterValue,
   isCanonicalFilterOperator,
   isValuelessFilterOperator,
 } from '../lib/filters'
@@ -44,18 +46,6 @@ export interface CreateSegmentOptions {
 
 const SEGMENT_FILTER_KEYS = new Set(['field', 'op', 'value'])
 
-function isSegmentFilterValue(value: unknown): boolean {
-  return (
-    typeof value === 'string' ||
-    typeof value === 'number' ||
-    typeof value === 'boolean' ||
-    (Array.isArray(value) &&
-      value.every(
-        (item) => typeof item === 'string' || typeof item === 'number',
-      ))
-  )
-}
-
 export function buildCreateSegmentBody(options: CreateSegmentOptions) {
   const filters = parseJsonArray(options.filters, '--filters')
   if (filters.length === 0) {
@@ -84,7 +74,7 @@ export function buildCreateSegmentBody(options: CreateSegmentOptions) {
       !isValuelessFilterOperator(record.op) &&
       (record.value === undefined ||
         record.value === null ||
-        !isSegmentFilterValue(record.value))
+        !isCanonicalFilterValue(record.value))
     ) {
       throw new Error(
         '--filters: "value" is required for every operator except notEmpty/isEmpty',
@@ -93,10 +83,15 @@ export function buildCreateSegmentBody(options: CreateSegmentOptions) {
     if (
       record.value !== undefined &&
       record.value !== null &&
-      !isSegmentFilterValue(record.value)
+      !isCanonicalFilterValue(record.value)
     ) {
       throw new Error(
         '--filters: "value" must be a string, number, boolean, or string/number array',
+      )
+    }
+    if (hasTinybirdMembershipDelimiter(record.value)) {
+      throw new Error(
+        '--filters: array string members cannot contain "|" because it is the Tinybird membership separator',
       )
     }
   }
@@ -120,7 +115,7 @@ segments.command('create', {
     filters: z
       .string()
       .describe(
-        'JSON array of canonical filter objects: [{"field","op","value"}]',
+        'JSON array of canonical filter objects: [{"field","op","value"}]. Array string members cannot contain "|".',
       ),
   }),
   examples: [

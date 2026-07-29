@@ -25,3 +25,22 @@ export function isCanonicalFilterOperator(op: unknown): op is string {
 export function isValuelessFilterOperator(op: unknown): boolean {
   return op === 'notEmpty' || op === 'isEmpty'
 }
+
+export function isCanonicalFilterValue(value: unknown): boolean {
+  return (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    (Array.isArray(value) &&
+      value.every(
+        (item) => typeof item === 'string' || typeof item === 'number',
+      ))
+  )
+}
+
+export function hasTinybirdMembershipDelimiter(value: unknown): boolean {
+  return (
+    Array.isArray(value) &&
+    value.some((item) => typeof item === 'string' && item.includes('|'))
+  )
+}

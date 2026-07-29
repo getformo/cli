@@ -389,7 +389,7 @@ List all user segments.
 | Option | Description |
 |---|---|
 | `--title` | Segment title |
-| `--filters` | JSON array of canonical `{field,op,value}` filter objects |
+| `--filters` | JSON array of canonical `{field,op,value}` filter objects. Array string members cannot contain `|` |
 
 ### `segments delete <segmentId>`
 Delete a user segment.
@@ -421,7 +421,7 @@ Pre-built analytics pipes — the same data that powers the Formo dashboard — 
 |---|---|
 | `--date-from` | Inclusive start date `YYYY-MM-DD` (default: 7 days before `--date-to`) |
 | `--date-to` | Inclusive end date `YYYY-MM-DD` (default: today) |
-| `--filters` | JSON array of `[{field,op,value}]`. For `in`/`nin`, array values are preferred; pipe-delimited strings are also accepted |
+| `--filters` | JSON array of `[{field,op,value}]`. For `in`/`nin`, array values are preferred; pipe-delimited strings are also accepted. Array string members cannot contain `|` |
 | `--params` | JSON object of pipe-specific params merged into the query (e.g. `{"limit":10,"group_by":"device"}`) |
 
 ```bash

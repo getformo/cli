@@ -40,6 +40,85 @@ describe('commands/analytics', function () {
       );
     });
 
+    it('validates every canonical filter entry', function () {
+      expect(() =>
+        buildAnalyticsParams({
+          filters: '[{"operand":"location","operator":"eq","value":"US"}]',
+        }),
+      ).to.throw(/field, op, value/);
+      expect(() =>
+        buildAnalyticsParams({
+          filters: '[{"field":"location","op":"equals","value":"US"}]',
+        }),
+      ).to.throw(/canonical "op"/);
+      expect(() =>
+        buildAnalyticsParams({
+          filters: '[{"field":"location","op":"contains"}]',
+        }),
+      ).to.throw(/"value" is required/);
+    });
+
+    it('accepts value-less and one-level nested canonical filters', function () {
+      const filters = [
+        { field: 'referrer', op: 'notEmpty' },
+        {
+          field: 'event',
+          op: 'eq',
+          value: 'purchase',
+          filters: [{ field: 'amount', op: 'gte', value: 100 }],
+        },
+      ];
+      expect(
+        buildAnalyticsParams({ filters: JSON.stringify(filters) }).filters,
+      ).to.equal(JSON.stringify(filters));
+    });
+
+    it('rejects recursive nested filters', function () {
+      expect(() =>
+        buildAnalyticsParams({
+          filters: JSON.stringify([
+            {
+              field: 'event',
+              op: 'eq',
+              value: 'purchase',
+              filters: [
+                {
+                  field: 'amount',
+                  op: 'gte',
+                  value: 100,
+                  filters: [{ field: 'currency', op: 'eq', value: 'USD' }],
+                },
+              ],
+            },
+          ]),
+        }),
+      ).to.throw(/one-level array of leaf filters/);
+    });
+
+    it('rejects literal pipes in membership array members', function () {
+      expect(() =>
+        buildAnalyticsParams({
+          filters: JSON.stringify([
+            { field: 'browser', op: 'in', value: ['Chrome|Mobile', 'Safari'] },
+          ]),
+        }),
+      ).to.throw(/cannot contain "\|"/);
+      expect(() =>
+        buildAnalyticsParams({
+          filters: JSON.stringify([
+            {
+              field: 'event',
+              op: 'eq',
+              value: 'purchase',
+              filters: [
+                { field: 'sku', op: 'in', value: ['alpha|beta', 'gamma'] },
+              ],
+            },
+          ]),
+        }),
+      ).to.throw(/cannot contain "\|"/);
+    });
+
     it('merges primitive params through unchanged', function () {
       const params = buildAnalyticsParams({
         params: '{"limit":10,"group_by":"device"}',
