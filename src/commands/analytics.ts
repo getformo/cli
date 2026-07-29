@@ -132,7 +132,7 @@ const sharedOptions = z.object({
     .optional()
     .describe(
       'JSON array of filter conditions: [{"field","op","value"}]. ' +
-        'Use op "in"/"nin" with a pipe-delimited value (e.g. "chrome|firefox").',
+        'Use op "in"/"nin" with an array value (e.g. ["chrome","firefox"]); pipe-delimited strings are also accepted.',
     ),
   params: z
     .string()

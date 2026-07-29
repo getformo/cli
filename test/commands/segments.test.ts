@@ -16,14 +16,14 @@ describe('commands/segments', function () {
   });
 
   describe('createSegmentRun() — local validation', function () {
-    it('throws on invalid --filter-sets JSON', function () {
-      expect(() => createSegmentRun({ title: 'x', filterSets: 'not-json' })).to.throw(/filter-sets/);
+    it('throws on invalid --filters JSON', function () {
+      expect(() => createSegmentRun({ title: 'x', filters: 'not-json' })).to.throw(/filters/);
     });
 
-    it('throws when --filter-sets is valid JSON but not an array', function () {
-      expect(() => createSegmentRun({ title: 'x', filterSets: '{"a":1}' })).to.throw(/filter-sets/);
-      expect(() => createSegmentRun({ title: 'x', filterSets: '5' })).to.throw(/filter-sets/);
-      expect(() => createSegmentRun({ title: 'x', filterSets: '"foo"' })).to.throw(/filter-sets/);
+    it('throws when --filters is valid JSON but not an array', function () {
+      expect(() => createSegmentRun({ title: 'x', filters: '{"a":1}' })).to.throw(/filters/);
+      expect(() => createSegmentRun({ title: 'x', filters: '5' })).to.throw(/filters/);
+      expect(() => createSegmentRun({ title: 'x', filters: '"foo"' })).to.throw(/filters/);
     });
   });
 });

@@ -89,8 +89,8 @@ formo profiles search [options]
 | `--order-by` | see below | Field to sort by |
 | `--order-dir` | `asc`, `desc` | Sort direction |
 | `--expand` | `string` | Comma-separated fields to expand |
-| `--conditions` | JSON array | Advanced filter conditions (see below) |
-| `--logic` | `and`, `or` | Logic operator for combining conditions (default `and`) |
+| `--filters` | JSON array | Advanced canonical filter objects (see below) |
+| `--logic` | `and`, `or` | Logic operator for combining filters (default `and`) |
 
 **`--order-by` values:** `last_onchain`, `first_onchain`, `net_worth_usd`, `updated_at`, `tx_count`, `first_seen`, `last_seen`, `num_sessions`, `revenue`, `volume`, `points`
 
@@ -103,10 +103,10 @@ formo profiles search --size 10
 formo profiles search --order-by net_worth_usd --order-dir desc --size 5
 
 # Profiles with net worth over $10k
-formo profiles search --conditions '[{"field":"users.net_worth_usd","op":"gt","value":10000}]' --size 20
+formo profiles search --filters '[{"field":"users.net_worth_usd","op":"gt","value":10000}]' --size 20
 
 # Profiles with > $1k balance on Ethereum (chain 1)
-formo profiles search --conditions '[{"field":"chains.1.balance","op":"gt","value":1000}]' --size 20
+formo profiles search --filters '[{"field":"chains.1.balance","op":"gt","value":1000}]' --size 20
 
 # Second page of 20, sorted by tx count
 formo profiles search --order-by tx_count --order-dir desc --page 2 --size 20 --expand labels
@@ -135,7 +135,7 @@ formo profiles search --order-by tx_count --order-dir desc --page 2 --size 20 --
 | `tokens.` | `tokens.0xA0b8…48.balance` |
 | `labels.` | `labels.coinbase.verified_account` |
 
-Combine multiple conditions with `--logic and` (default) or `--logic or`.
+Combine multiple filters with `--logic and` (default) or `--logic or`.
 
 ---
 
@@ -203,7 +203,7 @@ formo analytics <pipe> [options]
 |---|---|
 | `--date-from` | Inclusive start date `YYYY-MM-DD` (default: 7 days before `--date-to`) |
 | `--date-to` | Inclusive end date `YYYY-MM-DD` (default: today) |
-| `--filters` | JSON array of `[{field,op,value}]`. Use `in`/`nin` with a pipe-delimited value (e.g. `"chrome\|firefox"`) |
+| `--filters` | JSON array of `[{field,op,value}]`. For `in`/`nin`, array values are preferred; pipe-delimited strings are also accepted |
 | `--params` | JSON object of pipe-specific params merged into the query (e.g. `{"limit":10,"group_by":"device"}`) |
 
 **Examples:**
@@ -275,7 +275,7 @@ formo alerts create --name "High value tx" --trigger-type event
 
 # Create an alert with filters and recipients
 formo alerts create --name "Whale alert" --trigger-type event \
-  --trigger-filters '[{"name":"revenue","operator":"gt","value":"100000"}]' \
+  --trigger-filters '[{"field":"revenue","op":"gt","value":"100000"}]' \
   --recipient '[{"type":"webhook","value":["https://hooks.example.com/formo"]}]'
 ```
 
@@ -569,19 +569,19 @@ formo segments list
 ### Create a segment
 
 ```bash
-formo segments create --title <title> --filter-sets '<json>'
+formo segments create --title <title> --filters '<json>'
 ```
 
 | Option | Description |
 |---|---|
 | `--title` | Segment title |
-| `--filter-sets` | JSON array of filter set strings defining the segment |
+| `--filters` | JSON array of canonical `{field,op,value}` filter objects |
 
 > Requires `segments:write` scope.
 
 **Examples:**
 ```bash
-formo segments create --title "Whales" --filter-sets '["net_worth_usd > 100000"]'
+formo segments create --title "Whales" --filters '[{"field":"net_worth_usd","op":"gt","value":"100000"}]'
 ```
 
 ### Delete a segment
