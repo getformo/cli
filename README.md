@@ -119,7 +119,7 @@ formo profiles search --order-by net_worth_usd --order-dir desc --size 5
 formo profiles search --page 2 --size 20
 formo profiles search --filters '[{"field":"users.net_worth_usd","op":"gt","value":10000}]' --size 20
 formo profiles search --filters '[{"field":"users.net_worth_usd","op":"gt","value":10000},{"field":"users.volume","op":"gt","value":1000}]' --logic or --size 20
-formo profiles search --filters '[{"field":"chains.1.balance","op":"gt","value":1000}]' --size 20
+formo profiles search --filters '[{"field":"chains.balance","op":"gt","value":1000,"chain_id":"1"}]' --size 20
 ```
 
 ### Lifecycle tuning (advanced)
@@ -483,29 +483,38 @@ formo events ingest --events '[{"type":"track","event":"First"},{"type":"track",
 ```json
 [
   { "field": "users.net_worth_usd", "op": "gt", "value": 10000 },
-  { "field": "chains.1.balance", "op": "gte", "value": 1000 }
+  { "field": "chains.balance", "op": "gte", "value": 1000, "chain_id": "1" }
 ]
 ```
 
-> **The `field` must be a typed path.** A bare name like `net_worth_usd` is
+> **The `field` must be a canonical path.** A bare name like `net_worth_usd` is
 > silently ignored by the API (no error, no filtering — the search returns
-> everything). Always prefix the field with its type.
+> everything). Resource identity goes in the named qualifiers below, never in
+> the field path — identifier-in-path fields such as `chains.1.balance` are
+> rejected with a `400`.
 
 | Field | Type | Description |
 |---|---|---|
-| `field` | `string` | Typed path (see prefixes below) |
+| `field` | `string` | `users.{attribute}` or one of the four resource paths (see below) |
 | `op` | `string` | `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `nin`, `contains` (social fields only), `notEmpty` / `isEmpty` (value-less existence checks). Long-form spellings (`equals`, `greater`, `includes`, …) are retired — the API rejects them with a `400` naming the token |
-| `value` | `any` | Value to compare against |
-| `scope` | `string` | _(token filters only)_ `any` or `protocol` |
-| `appId` | `string` | _(token filters with `scope: protocol`)_ e.g. `aave-v3` |
+| `value` | `any` | Value to compare against; must be a number on the `.balance` fields |
+| `chain_id` | `string` | _(optional on any resource filter)_ restrict to one chain; omit to match any |
+| `app_id` | `string` | _(required by `apps.balance`, and by `tokens.balance` with `scope: protocol`)_ e.g. `aave-v3` |
+| `token_address` | `string` | _(required by `tokens.balance`)_ |
+| `tag_id` | `string` | _(required by `labels.value`)_ e.g. `coinbase.verified_account` |
+| `scope` | `string` | _(required by `tokens.balance`)_ `any` or `protocol` |
 
-| Prefix | Examples |
-|---|---|
-| `users.` | `users.net_worth_usd`, `users.volume`, `users.revenue`, `users.points`, `users.device`, `users.location`, `users.lifecycle`, `users.ens`, `users.farcaster` |
-| `chains.` | `chains.balance` (any chain), `chains.1.balance` (Ethereum) |
-| `apps.` | `apps.uniswap-v3.balance` |
-| `tokens.` | `tokens.0xA0b8…48.balance` |
-| `labels.` | `labels.coinbase.verified_account` |
+| Field | Required qualifiers | Example |
+|---|---|---|
+| `users.{attribute}` | none | `{"field":"users.net_worth_usd","op":"gt","value":10000}` |
+| `chains.balance` | none (`chain_id` optional) | `{"field":"chains.balance","op":"gte","value":1000,"chain_id":"1"}` |
+| `apps.balance` | `app_id` | `{"field":"apps.balance","op":"gt","value":500,"app_id":"uniswap-v3"}` |
+| `tokens.balance` | `token_address`, `scope` | `{"field":"tokens.balance","op":"gt","value":0,"token_address":"0xA0b8…48","scope":"any"}` |
+| `labels.value` | `tag_id` | `{"field":"labels.value","op":"eq","value":"true","tag_id":"coinbase.verified_account"}` |
+
+User attributes for `users.{attribute}`: `net_worth_usd`, `volume`, `revenue`,
+`points`, `device`, `location`, `lifecycle`, `ens`, `farcaster`, and the other
+social handles.
 
 Combine multiple filters with `--logic and` (default) or `--logic or`.
 

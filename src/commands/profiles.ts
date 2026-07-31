@@ -141,13 +141,25 @@ export interface SearchProfilesOptions extends LifecycleThresholdOptions {
   logic?: 'and' | 'or'
 }
 
-// Accepted first segments for a FilterCondition `field`, mirroring the API's
-// parseField(). A field whose prefix is not one of these is silently ignored
-// server-side (no error, no filtering — the search returns everything), so we
-// reject it client-side with an actionable message instead.
-const FILTER_FIELD_PREFIXES = new Set([
-  'user',
-  'users',
+// Prefixes that may lead a user-surface `field` (e.g. `users.net_worth_usd`).
+// A bare name like `net_worth_usd` is silently ignored server-side (no error,
+// no filtering — the search returns everything), so we reject it client-side.
+const USER_FIELD_PREFIXES = new Set(['user', 'users'])
+
+// The four canonical resource filter fields. Resource identity lives in named
+// qualifier properties — never in the field path. The retired
+// identifier-in-path spellings (`chains.1.balance`, `apps.uniswap-v3.balance`,
+// `tokens.0x….balance`, `labels.vip`) are rejected by the API with a 400.
+const RESOURCE_FILTER_FIELDS = new Set([
+  'chains.balance',
+  'apps.balance',
+  'tokens.balance',
+  'labels.value',
+])
+
+// Prefixes owned by the resource fields above. A field that leads with one of
+// these but is not an exact canonical path is a retired dynamic path.
+const RESOURCE_FIELD_PREFIXES = new Set([
   'chain',
   'chains',
   'app',
@@ -158,11 +170,83 @@ const FILTER_FIELD_PREFIXES = new Set([
   'labels',
 ])
 
+const QUALIFIER_KEYS = [
+  'chain_id',
+  'app_id',
+  'token_address',
+  'tag_id',
+  'scope',
+] as const
+
+const FILTER_ENTRY_KEYS = new Set<string>([
+  'field',
+  'op',
+  'value',
+  ...QUALIFIER_KEYS,
+])
+
+/**
+ * Enforce the per-field qualifier rules, mirroring the API's schema. Sending a
+ * qualifier the field does not accept — or omitting a required one — is a 400,
+ * so we fail here with a message that names the offending key.
+ */
+function validateQualifiers(
+  record: Record<string, unknown>,
+  field: string,
+): void {
+  const present = (key: string) => record[key] !== undefined
+  const required = (key: string) => {
+    if (!present(key)) {
+      throw new Error(`--filters: "${key}" is required for "${field}"`)
+    }
+  }
+  const forbidden = (keys: readonly string[]) => {
+    for (const key of keys) {
+      if (present(key)) {
+        throw new Error(`--filters: "${key}" is not valid for "${field}"`)
+      }
+    }
+  }
+
+  switch (field) {
+    case 'chains.balance':
+      // chain_id optional — omit it to match any chain.
+      forbidden(['app_id', 'token_address', 'tag_id', 'scope'])
+      break
+    case 'apps.balance':
+      required('app_id')
+      forbidden(['token_address', 'tag_id', 'scope'])
+      break
+    case 'tokens.balance':
+      required('token_address')
+      required('scope')
+      if (record.scope !== 'any' && record.scope !== 'protocol') {
+        throw new Error(`--filters: "scope" must be "any" or "protocol"`)
+      }
+      // app_id identifies the protocol, so it is required by (and only by)
+      // scope: "protocol".
+      if (record.scope === 'protocol') {
+        required('app_id')
+      } else {
+        forbidden(['app_id'])
+      }
+      forbidden(['tag_id'])
+      break
+    case 'labels.value':
+      required('tag_id')
+      forbidden(['app_id', 'token_address', 'scope'])
+      break
+    default:
+      // users.* — a user attribute carries no resource identity.
+      forbidden(QUALIFIER_KEYS)
+  }
+}
+
 /**
  * Parse and validate the --filters JSON. Ensures it is an array of
- * `{ field, op, value }` objects whose `field` is a typed path (e.g.
- * `users.net_worth_usd`) — a bare name like `net_worth_usd` is silently
- * dropped by the API, so it is rejected here. Exported for unit testing.
+ * `{ field, op, value }` objects carrying a canonical `field` — either
+ * `users.{attribute}` or one of the four stable resource paths, with resource
+ * identity in named qualifier properties. Exported for unit testing.
  */
 export function parseSearchFilters(raw: string): unknown[] {
   let parsed: unknown
@@ -183,12 +267,43 @@ export function parseSearchFilters(raw: string): unknown[] {
     if (typeof field !== 'string' || field.length === 0) {
       throw new Error('--filters: each entry must have a non-empty string "field"')
     }
-    if (!field.includes('.') || !FILTER_FIELD_PREFIXES.has(field.split('.')[0])) {
-      throw new Error(
-        `--filters: field "${field}" must be a typed path — prefix it with ` +
-          'users., chains., apps., tokens., or labels. ' +
-          '(a bare name is silently ignored by the API and returns the entire unfiltered dataset)',
-      )
+    for (const key of Object.keys(record)) {
+      if (!FILTER_ENTRY_KEYS.has(key)) {
+        // `appId` was the pre-P-2387 spelling; the API now rejects unknown keys.
+        const hint =
+          key === 'appId' ? ' — use the snake_case "app_id" qualifier' : ''
+        throw new Error(`--filters: unknown property "${key}"${hint}`)
+      }
+    }
+    const prefix = field.split('.')[0]
+    if (!RESOURCE_FILTER_FIELDS.has(field)) {
+      if (RESOURCE_FIELD_PREFIXES.has(prefix)) {
+        throw new Error(
+          `--filters: field "${field}" is a retired identifier-in-path spelling. ` +
+            'Use a stable path — chains.balance, apps.balance, tokens.balance, or labels.value — ' +
+            'and move the identifier into a qualifier (chain_id, app_id, token_address, tag_id). ' +
+            'The API rejects the old form with a 400.',
+        )
+      }
+      if (!field.includes('.') || !USER_FIELD_PREFIXES.has(prefix)) {
+        throw new Error(
+          `--filters: field "${field}" must be a canonical path — either ` +
+            'users.{attribute}, or one of chains.balance, apps.balance, tokens.balance, labels.value ' +
+            '(a bare name is silently ignored by the API and returns the entire unfiltered dataset)',
+        )
+      }
+    }
+    validateQualifiers(record, field)
+    // The balance fields compare numerically; a stringified number is a 400.
+    if (
+      field !== 'labels.value' &&
+      RESOURCE_FILTER_FIELDS.has(field) &&
+      typeof record.value !== 'number'
+    ) {
+      throw new Error(`--filters: "value" must be a number for "${field}"`)
+    }
+    if (field === 'labels.value' && record.value === '') {
+      throw new Error(`--filters: "value" must be non-empty for "labels.value"`)
     }
     if (!isCanonicalFilterOperator(record.op)) {
       throw new Error(
@@ -285,12 +400,15 @@ profiles.command('search', {
           'Profile: users.net_worth_usd, users.volume, users.revenue, users.points. ' +
           'Engagement: users.device, users.browser, users.os, users.location, users.lifecycle. ' +
           'Socials: users.ens, users.farcaster, users.lens, etc. ' +
-          'Chains: chains.balance or chains.{chain_id}.balance. ' +
-          'Apps: apps.{app_id}.balance. Tokens: tokens.{address}.balance ' +
-          '(optional "scope":"any"|"protocol" + "appId"). Labels: labels.{tag_id}. ' +
+          'Resource filters use a stable field plus named qualifiers: ' +
+          'chains.balance (+ optional "chain_id"); ' +
+          'apps.balance (+ "app_id", optional "chain_id"); ' +
+          'tokens.balance (+ "token_address", "scope":"any"|"protocol", "app_id" when scope is "protocol", optional "chain_id"); ' +
+          'labels.value (+ "tag_id", optional "chain_id"). ' +
           'op: eq, neq, gt, gte, lt, lte, in, nin, contains, notEmpty, isEmpty ' +
           '(contains = substring, social fields only; notEmpty/isEmpty = value-less existence checks on string fields). ' +
-          'Long-form spellings (equals, notEquals, greater, greaterOrEqual, less, lessOrEqual, notIn, includes) are retired; the API rejects them with a 400 naming the token.',
+          'Retired and rejected with a 400: identifier-in-path fields (chains.1.balance, apps.uniswap-v3.balance, tokens.0x….balance, labels.vip), ' +
+          'the "appId" spelling, and long-form operators (equals, notEquals, greater, greaterOrEqual, less, lessOrEqual, notIn, includes).',
       ),
     logic: z
       .enum(['and', 'or'])
@@ -326,13 +444,22 @@ profiles.command('search', {
     },
     {
       options: {
-        filters: '[{"field":"chains.1.balance","op":"gt","value":1000}]',
+        filters:
+          '[{"field":"chains.balance","op":"gt","value":1000,"chain_id":"1"}]',
         size: 20,
       },
       description: 'Search profiles with > $1k balance on Ethereum (chain 1)',
     },
+    {
+      options: {
+        filters:
+          '[{"field":"labels.value","op":"eq","value":"tier-1","tag_id":"vip"}]',
+        size: 20,
+      },
+      description: 'Search profiles carrying the vip label with value tier-1',
+    },
   ],
-  hint: 'Requires profiles:read scope on your API key. Filter "field" must be a typed path (e.g. users.net_worth_usd) — bare names are ignored by the API.',
+  hint: 'Requires profiles:read scope on your API key. Filter "field" must be a canonical path (users.{attribute}, chains.balance, apps.balance, tokens.balance, labels.value) with resource identity in the chain_id/app_id/token_address/tag_id qualifiers — bare names are ignored by the API and identifier-in-path fields are rejected with a 400.',
   run({ options }) {
     return searchProfilesRun(options)
   },
