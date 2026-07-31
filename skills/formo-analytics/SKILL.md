@@ -78,7 +78,7 @@ formo profiles search \
   --size 20
 ```
 
-Always use typed filter paths such as `users.net_worth_usd`, `chains.1.balance`, `apps.uniswap-v3.balance`, `tokens.<address>.balance`, or `labels.<source>.<tag>`. A bare field such as `net_worth_usd` may be ignored.
+Always use canonical filter paths: `users.<attribute>` (e.g. `users.net_worth_usd`), or one of the four resource fields — `chains.balance`, `apps.balance`, `tokens.balance`, `labels.value` — with the resource identified by a named qualifier (`chain_id`, `app_id`, `token_address`, `tag_id`) alongside `field`/`op`/`value`. A bare field such as `net_worth_usd` may be ignored, and identifier-in-path spellings such as `chains.1.balance` or `labels.<source>.<tag>` are rejected with a `400`.
 
 Profile updates, label changes, and wallet imports require `profiles:write`. Preserve pagination metadata and continue only while `has_more` is true.
 

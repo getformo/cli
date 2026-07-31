@@ -393,20 +393,91 @@ describe('commands / body builders', function () {
   // ── Profiles search filters ──
 
   describe('parseSearchFilters()', function () {
-    it('accepts filters with typed field prefixes', function () {
+    it('accepts filters with canonical field paths', function () {
       const filters = parseSearchFilters(
-        '[{"field":"users.net_worth_usd","op":"gt","value":10000},{"field":"chains.1.balance","op":"gte","value":1000}]',
+        '[{"field":"users.net_worth_usd","op":"gt","value":10000},{"field":"chains.balance","op":"gte","value":1000,"chain_id":"1"}]',
       );
       expect(filters).to.have.length(2);
       expect((filters[0] as { field: string }).field).to.equal('users.net_worth_usd');
     });
 
-    it('accepts apps., tokens., and labels. prefixes', function () {
+    it('accepts apps., tokens., and labels. resource filters with qualifiers', function () {
       expect(() =>
         parseSearchFilters(
-          '[{"field":"apps.uniswap-v3.balance","op":"gt","value":0},{"field":"tokens.0xabc.balance","op":"gt","value":1},{"field":"labels.coinbase.verified_account","op":"eq","value":"true"}]',
+          '[{"field":"apps.balance","op":"gt","value":0,"app_id":"uniswap-v3"},{"field":"tokens.balance","op":"gt","value":1,"token_address":"0xabc","scope":"any"},{"field":"labels.value","op":"eq","value":"true","tag_id":"coinbase.verified_account"}]',
         ),
       ).to.not.throw();
+    });
+
+    it('accepts a protocol-scoped token filter carrying app_id', function () {
+      expect(() =>
+        parseSearchFilters(
+          '[{"field":"tokens.balance","op":"gt","value":1,"token_address":"0xabc","scope":"protocol","app_id":"aave-v3"}]',
+        ),
+      ).to.not.throw();
+    });
+
+    // The retired dialect: identifiers embedded in the field path. The API
+    // rejects these with a 400, so the CLI must not build such a request.
+    it('rejects retired identifier-in-path fields', function () {
+      for (const field of [
+        'chains.1.balance',
+        'apps.uniswap-v3.balance',
+        'tokens.0xabc.balance',
+        'labels.coinbase.verified_account',
+      ]) {
+        expect(() =>
+          parseSearchFilters(`[{"field":"${field}","op":"gt","value":1}]`),
+        ).to.throw(/retired identifier-in-path spelling/);
+      }
+    });
+
+    it('rejects the retired appId spelling', function () {
+      expect(() =>
+        parseSearchFilters(
+          '[{"field":"tokens.balance","op":"gt","value":1,"token_address":"0xabc","scope":"protocol","appId":"aave-v3"}]',
+        ),
+      ).to.throw(/unknown property "appId".*app_id/);
+    });
+
+    it('requires the qualifier each resource field identifies by', function () {
+      expect(() =>
+        parseSearchFilters('[{"field":"apps.balance","op":"gt","value":1}]'),
+      ).to.throw(/"app_id" is required/);
+      expect(() =>
+        parseSearchFilters('[{"field":"labels.value","op":"eq","value":"x"}]'),
+      ).to.throw(/"tag_id" is required/);
+      expect(() =>
+        parseSearchFilters(
+          '[{"field":"tokens.balance","op":"gt","value":1,"scope":"any"}]',
+        ),
+      ).to.throw(/"token_address" is required/);
+      expect(() =>
+        parseSearchFilters(
+          '[{"field":"tokens.balance","op":"gt","value":1,"token_address":"0xabc","scope":"protocol"}]',
+        ),
+      ).to.throw(/"app_id" is required/);
+    });
+
+    it('rejects a qualifier the field does not accept', function () {
+      expect(() =>
+        parseSearchFilters(
+          '[{"field":"chains.balance","op":"gt","value":1,"app_id":"uniswap-v3"}]',
+        ),
+      ).to.throw(/"app_id" is not valid/);
+      expect(() =>
+        parseSearchFilters(
+          '[{"field":"users.net_worth_usd","op":"gt","value":1,"chain_id":"1"}]',
+        ),
+      ).to.throw(/"chain_id" is not valid/);
+    });
+
+    it('requires a numeric value on the balance fields', function () {
+      expect(() =>
+        parseSearchFilters(
+          '[{"field":"chains.balance","op":"gt","value":"1000"}]',
+        ),
+      ).to.throw(/"value" must be a number/);
     });
 
     it('rejects retired long-form operator tokens locally', function () {
@@ -420,13 +491,13 @@ describe('commands / body builders', function () {
     it('rejects a bare (untyped) field — the silent-failure footgun', function () {
       expect(() =>
         parseSearchFilters('[{"field":"net_worth_usd","op":"gt","value":10000}]'),
-      ).to.throw(/must be a typed path/);
+      ).to.throw(/must be a canonical path/);
     });
 
     it('rejects a known field name without its prefix', function () {
       expect(() =>
         parseSearchFilters('[{"field":"tx_count","op":"gt","value":5}]'),
-      ).to.throw(/must be a typed path/);
+      ).to.throw(/must be a canonical path/);
     });
 
     it('throws on invalid JSON', function () {
