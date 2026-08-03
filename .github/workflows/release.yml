@@ -110,17 +110,24 @@ jobs:
           RELEASE_DATE=$(date +%Y-%m-%d)
 
           if [ -n "$PREV_TAG" ]; then
-            COMMITS=$(git log ${PREV_TAG}..HEAD --pretty=format:"%s    %h" --no-merges)
+            # Put the hash first and separate it from the subject with a real
+            # tab. The loop below validates the hash before making a link, so
+            # malformed log output cannot silently publish an empty URL.
+            COMMITS=$(git log "${PREV_TAG}..HEAD" --pretty=format:'%h%x09%s' --no-merges)
           else
-            COMMITS=$(git log --pretty=format:"%s    %h" --no-merges)
+            COMMITS=$(git log --pretty=format:'%h%x09%s' --no-merges)
           fi
 
           FEATURES=""
           FIXES=""
           OTHER=""
 
-          while IFS=$'\t' read -r message hash; do
+          while IFS=$'\t' read -r hash message; do
             [ -z "$message" ] && continue
+            if [[ ! $hash =~ ^[0-9a-f]+$ ]]; then
+              echo "❌ Could not parse commit hash for release-note entry: $message" >&2
+              exit 1
+            fi
             if [[ $message =~ \(#([0-9]+)\) ]]; then
               PR_NUM="${BASH_REMATCH[1]}"
               CLEAN_MESSAGE=$(echo "$message" | sed -E 's/ ?\(#[0-9]+\)//')
