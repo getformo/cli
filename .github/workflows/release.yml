@@ -110,9 +110,12 @@ jobs:
           RELEASE_DATE=$(date +%Y-%m-%d)
 
           if [ -n "$PREV_TAG" ]; then
-            COMMITS=$(git log ${PREV_TAG}..HEAD --pretty=format:"%s    %h" --no-merges)
+            # Separate the subject and hash with a real tab because the loop
+            # below parses each entry with IFS=$'\t'. Using spaces here left
+            # `hash` empty and produced an empty Markdown link (`()`).
+            COMMITS=$(git log "${PREV_TAG}..HEAD" --pretty=format:'%s%x09%h' --no-merges)
           else
-            COMMITS=$(git log --pretty=format:"%s    %h" --no-merges)
+            COMMITS=$(git log --pretty=format:'%s%x09%h' --no-merges)
           fi
 
           FEATURES=""
