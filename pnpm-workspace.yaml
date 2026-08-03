@@ -3,6 +3,12 @@ blockExoticSubdeps: true
 
 overrides:
   serialize-javascript: '>=7.0.5'
+  # form-data <4.0.6: CRLF injection via field names/filenames
+  # (CVE-2026-12143, HIGH; axios transitive).
+  'form-data': '>=4.0.6 <5'
+  # zod <4.4.0: prototype pollution + missing input validation
+  # (AIKIDO-2026-10706/-10707; @modelcontextprotocol/server transitive).
+  'zod': '>=4.4.0 <5'
 
 allowBuilds:
   esbuild: true
