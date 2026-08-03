@@ -438,6 +438,10 @@ formo analytics retention --filters '[{"field":"location","op":"eq","value":"US"
 
 > Requires `query:read` scope. Run `formo analytics <pipe> --help` for the pipe-specific params accepted via `--params`.
 
+On `kpis`, `top_*`, `revenue_*` and `volume_by_metric`, `--params '{"page_scope":"session"}'` widens a `page` filter from page-scoped metrics (the default) to the legacy session scope.
+
+All user-attribute, profile, social, lifecycle and resource predicates go in the single `--filters` array, using the canonical envelope with named qualifiers (`chain_id`, `app_id`, `token_address`, `scope`, `tag_id`). The retired per-family params — `socials`, `chain_filters`, `app_filters`, `token_filters`, `label_filters`, `profile_filters`, `lifecycle_filter` — are rejected with a `400` if passed through `--params`.
+
 ---
 
 ## `formo import`
@@ -500,7 +504,7 @@ formo events ingest --events '[{"type":"track","event":"First"},{"type":"track",
 | Field | Type | Description |
 |---|---|---|
 | `field` | `string` | `users.{attribute}` or one of the four resource paths (see below) |
-| `op` | `string` | `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `nin`, `contains` (social fields only), `notEmpty` / `isEmpty` (value-less existence checks). Long-form spellings (`equals`, `greater`, `includes`, …) are retired — the API rejects them with a `400` naming the token |
+| `op` | `string` | `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `nin`, `contains`, `startsWith`, `endsWith`, `notEmpty` / `isEmpty` (value-less existence checks). Support is per field — see [operator support](#operator-support). Long-form spellings (`equals`, `greater`, `includes`, …) are retired — the API rejects them with a `400` naming the token |
 | `value` | `any` | Value to compare against; must be a number on the `.balance` fields |
 | `chain_id` | `string` | _(optional on any resource filter)_ restrict to one chain; omit to match any |
 | `app_id` | `string` | _(required by `apps.balance`, and by `tokens.balance` with `scope: protocol`)_ e.g. `aave-v3` |
@@ -519,6 +523,21 @@ formo events ingest --events '[{"type":"track","event":"First"},{"type":"track",
 User attributes for `users.{attribute}`: `net_worth_usd`, `volume`, `revenue`,
 `points`, `device`, `location`, `lifecycle`, `ens`, `farcaster`, and the other
 social handles.
+
+### Operator support
+
+The canonical vocabulary is shared, but each field implements a subset. The API
+rejects an unsupported pairing with a `400`:
+
+| Field class | Supported operators |
+|---|---|
+| `chains.balance`, `apps.balance`, `tokens.balance` | `eq`, `neq`, `gt`, `gte`, `lt`, `lte` (value must be a JSON number) |
+| `labels.value` | comparison operators plus `contains` (case-insensitive) |
+| Numeric profile metrics (`users.net_worth_usd`, `users.volume`, `users.revenue`, `users.points`) | comparison operators |
+| Routable string attributes (`users.device`, `users.os`, `users.referrer`, `users.utm_*`, `users.click_id`, and the `first_*`/`last_*` attribution variants) | full vocabulary; `contains`/`startsWith`/`endsWith` match case-sensitively |
+| Social fields (`users.twitter`, `users.email`, `users.farcaster`, …) | `contains` (case-insensitive) and `notEmpty`; `startsWith`/`endsWith`/`isEmpty` are rejected |
+| `users.paid_source` (and `first_`/`last_` variants) | `eq`, `neq`, `in`, `nin`, `notEmpty`, `isEmpty` — it is a fixed ad-network enum |
+| `users.lifecycle` | `eq` (one stage) and `in` (a list of stages) |
 
 Combine multiple filters with `--logic and` (default) or `--logic or`.
 
