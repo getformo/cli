@@ -203,13 +203,10 @@ describe('commands/analytics', function () {
       expect(result).to.exist;
     });
 
-    // SKIPPED until the API-side fix unifying /v0/funnel and /v0/flow to
-    // snake_case date_from/date_to is deployed. The CLI now sends snake_case
-    // (see buildAnalyticsParams); production still only accepts camelCase
-    // dateFrom/dateTo for these two pipes, so a live call returns HTTP 400.
-    // Re-enable (.skip -> it) once the API change ships. The deterministic
-    // snake_case unit test above keeps the CLI behavior locked meanwhile.
-    it.skip('returns data from the funnel pipe (snake_case dates + JSON steps)', async function () {
+    // /v0/funnel and /v0/flow accept snake_case date_from/date_to — the pipes
+    // that once required camelCase were unified API-side, verified live. These
+    // two guard that: a regression to camelCase-only would 400 here.
+    it('returns data from the funnel pipe (snake_case dates + JSON steps)', async function () {
       await requiresLiveApi(this);
       const result = (await runAnalytics('funnel', {
         dateFrom: '2026-03-01',
@@ -220,7 +217,7 @@ describe('commands/analytics', function () {
       expect(result).to.have.property('data');
     });
 
-    it.skip('returns data from the flow pipe (snake_case dates + JSON start_step)', async function () {
+    it('returns data from the flow pipe (snake_case dates + JSON start_step)', async function () {
       await requiresLiveApi(this);
       const result = (await runAnalytics('flow', {
         dateFrom: '2026-03-01',
