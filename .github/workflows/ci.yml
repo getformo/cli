@@ -82,3 +82,54 @@ jobs:
         run: pnpm test
         env:
           TEST_TOKEN: ${{ secrets.TEST_TOKEN }}
+
+  # Installs the packed tarball the way a user does — with npm, resolving
+  # dependency ranges fresh instead of replaying pnpm-lock.yaml. Every other
+  # job installs from the lockfile, which pins transitive versions and so
+  # cannot see a consumer-facing resolution break. That gap shipped a CLI
+  # that crashed on startup for anyone running `npx @formo/cli`: incur asked
+  # for `^2.0.0-alpha.2` of @modelcontextprotocol/server, the 2.0.0 stable
+  # dropped an export it imports, and no job installed in a way that noticed.
+  smoke:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    needs: [build, lint]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      - name: Setup Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: "24.15.0"
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build CLI
+        run: pnpm build
+
+      - name: Pack the tarball
+        run: npm pack --pack-destination "$RUNNER_TEMP"
+
+      - name: Install it with npm, as a user would
+        working-directory: ${{ runner.temp }}
+        run: |
+          mkdir -p smoke && cd smoke
+          npm init -y > /dev/null
+          npm install "$RUNNER_TEMP"/formo-cli-*.tgz
+
+      - name: The binary must start and report its version
+        working-directory: ${{ runner.temp }}/smoke
+        run: |
+          version=$(./node_modules/.bin/formo --version)
+          echo "formo --version -> $version"
+          expected=$(node -p "require('./node_modules/@formo/cli/package.json').version")
+          test "$version" = "$expected"
+
+      - name: Help must render for a representative command
+        working-directory: ${{ runner.temp }}/smoke
+        run: ./node_modules/.bin/formo profiles search --help > /dev/null

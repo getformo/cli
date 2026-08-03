@@ -7,9 +7,11 @@ overrides:
 allowBuilds:
   esbuild: true
 
-# Kebab-cases camelCase flag names in incur's help/skill/example output.
+# Kebab-cases camelCase flag names in incur's help/skill/example/CTA output.
 # incur is pinned to an exact version in package.json while this patch is
 # applied — upstream is converging on the same fix, so re-check (and ideally
-# drop the patch) on every incur bump.
+# drop the patch) on every incur bump. As of 0.4.26 the option *definitions*
+# render kebab-case upstream but examples, usage lines, CTAs and skill tables
+# still emit the raw camelCase key, so all four sites remain patched.
 patchedDependencies:
-  incur: patches/incur.patch
+  incur@0.4.26: patches/incur@0.4.26.patch

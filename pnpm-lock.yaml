@@ -8,7 +8,7 @@ overrides:
   serialize-javascript: '>=7.0.5'
 
 patchedDependencies:
-  incur: 59ec45aa48f7686d1061ad0b42aaf3a47e84080dfce7d2baf3c763a1b2d214fc
+  incur@0.4.26: ae18879675f35e842cb43134909e7abd7d02f4268e1d733be25fd99a79bb78d1
 
 importers:
 
@@ -18,8 +18,8 @@ importers:
         specifier: ^1.18.0
         version: 1.18.0
       incur:
-        specifier: 0.3.25
-        version: 0.3.25(patch_hash=59ec45aa48f7686d1061ad0b42aaf3a47e84080dfce7d2baf3c763a1b2d214fc)
+        specifier: 0.4.26
+        version: 0.4.26(patch_hash=ae18879675f35e842cb43134909e7abd7d02f4268e1d733be25fd99a79bb78d1)
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -278,18 +278,17 @@ packages:
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
     engines: {node: '>=12'}
 
-  '@modelcontextprotocol/server@2.0.0-alpha.2':
-    resolution: {integrity: sha512-gmLgdHzlYM8L7Aw/+VE0kxjT25WKamtUSLNhdOgrJq5CrESvqVSoAfWSJJeNPUXNTluQ+dYDGFbKVitdsJtbPA==}
+  '@modelcontextprotocol/server@2.0.0-alpha.4':
+    resolution: {integrity: sha512-/KEo3ZJ50HlagHp0lz2vPgfBZFtXHu6zTBXT9XqPc+4O9i4+IbBVWKq/a9yAfv/ifp0u3+mRo8SUk5kMKzhN8A==}
     engines: {node: '>=20'}
-    peerDependencies:
-      '@cfworker/json-schema': ^4.1.1
-    peerDependenciesMeta:
-      '@cfworker/json-schema':
-        optional: true
 
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
     engines: {node: '>=14'}
+
+  '@scalar/openapi-types@0.8.0':
+    resolution: {integrity: sha512-WmaxVSfvY5K/TwcG2B2TU1WOe1As1uc2s7myswtP6dBlcjU3hM08SApxv/jmyGaCE8t4gO5BBhmHY4pDUfmr2g==}
+    engines: {node: '>=22'}
 
   '@toon-format/toon@2.1.0':
     resolution: {integrity: sha512-JwWptdF5eOA0HaQxbKAzkpQtR4wSWTEfDlEy/y3/4okmOAX1qwnpLZMmtEWr+ncAhTTY1raCKH0kteHhSXnQqg==}
@@ -718,8 +717,8 @@ packages:
     resolution: {integrity: sha512-JmXMZ6wuvDmLiHEml9ykzqO6lwFbof0GG4IkcGaENdCRDDmMVnny7s5HsIgHCbaq0w2MyPhDqkhTUgS2LU2PHA==}
     engines: {node: '>=0.8.19'}
 
-  incur@0.3.25:
-    resolution: {integrity: sha512-jrSkzauM42ilbQJ6THVkAY6dTulkyVW0sZpVHdA8gfiBwrLrLnLUf8U3bAOegAKBIMSOFgk1idchgu9xm9HMng==}
+  incur@0.4.26:
+    resolution: {integrity: sha512-63lwOc8+o1VeFkIW3sWWMrDSP5Dd1NsvucUWyxLUk+DoNRiNl7cj481nlLdlboXkq+tqYPBSlV/7XbylS2S4BA==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -1149,14 +1148,14 @@ snapshots:
       wrap-ansi: 8.1.0
       wrap-ansi-cjs: wrap-ansi@7.0.0
 
-  '@modelcontextprotocol/server@2.0.0-alpha.2(@cfworker/json-schema@4.1.1)':
+  '@modelcontextprotocol/server@2.0.0-alpha.4':
     dependencies:
       zod: 4.3.6
-    optionalDependencies:
-      '@cfworker/json-schema': 4.1.1
 
   '@pkgjs/parseargs@0.11.0':
     optional: true
+
+  '@scalar/openapi-types@0.8.0': {}
 
   '@toon-format/toon@2.1.0': {}
 
@@ -1625,10 +1624,11 @@ snapshots:
 
   imurmurhash@0.1.4: {}
 
-  incur@0.3.25(patch_hash=59ec45aa48f7686d1061ad0b42aaf3a47e84080dfce7d2baf3c763a1b2d214fc):
+  incur@0.4.26(patch_hash=ae18879675f35e842cb43134909e7abd7d02f4268e1d733be25fd99a79bb78d1):
     dependencies:
       '@cfworker/json-schema': 4.1.1
-      '@modelcontextprotocol/server': 2.0.0-alpha.2(@cfworker/json-schema@4.1.1)
+      '@modelcontextprotocol/server': 2.0.0-alpha.4
+      '@scalar/openapi-types': 0.8.0
       '@toon-format/toon': 2.1.0
       tokenx: 1.3.0
       yaml: 2.8.3
