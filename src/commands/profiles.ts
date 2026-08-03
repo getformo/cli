@@ -405,8 +405,13 @@ profiles.command('search', {
           'apps.balance (+ "app_id", optional "chain_id"); ' +
           'tokens.balance (+ "token_address", "scope":"any"|"protocol", "app_id" when scope is "protocol", optional "chain_id"); ' +
           'labels.value (+ "tag_id", optional "chain_id"). ' +
-          'op: eq, neq, gt, gte, lt, lte, in, nin, contains, notEmpty, isEmpty ' +
-          '(contains = substring, social fields only; notEmpty/isEmpty = value-less existence checks on string fields). ' +
+          'op: eq, neq, gt, gte, lt, lte, in, nin, contains, startsWith, endsWith, notEmpty, isEmpty. ' +
+          'Operator support is per field: the .balance fields take comparison operators only; ' +
+          'contains works on routable string attributes (users.device, users.os, users.referrer, users.utm_*, users.click_id — case-sensitive), ' +
+          'on social fields and on labels.value (case-insensitive); ' +
+          'startsWith/endsWith are routable string attributes only; ' +
+          'notEmpty/isEmpty are value-less existence checks on string fields; ' +
+          'users.lifecycle takes only eq and in. ' +
           'Retired and rejected with a 400: identifier-in-path fields (chains.1.balance, apps.uniswap-v3.balance, tokens.0x….balance, labels.vip), ' +
           'the "appId" spelling, and long-form operators (equals, notEquals, greater, greaterOrEqual, less, lessOrEqual, notIn, includes).',
       ),
