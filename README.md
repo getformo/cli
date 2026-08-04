@@ -91,10 +91,12 @@ Fetch a single wallet profile by address or ENS name.
 | Option | Description |
 |---|---|
 | `--expand` | Comma-separated fields: `apps`, `chains`, `tokens`, `labels` |
+| `--timestamp` | ISO-8601 timestamp; return the closest stored wallet-enrichment snapshot |
 
 ```bash
 formo profiles get 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
 formo profiles get vitalik.eth --expand labels,chains
+formo profiles get vitalik.eth --timestamp 2025-06-21T10:03:00Z
 ```
 
 ### `profiles search`
@@ -105,6 +107,7 @@ Search wallet profiles with filters, sorting, and pagination. Returns a `Paginat
 |---|---|
 | `--address` | Filter by wallet address |
 | `--search` | Free-text search across address and identity fields |
+| `--timestamp` | ISO-8601 timestamp; requires `--address` and returns the closest stored wallet-enrichment snapshot |
 | `--page` | Page number (1-indexed, default `1`) |
 | `--size` | Page size (default `100`, max `1000`) |
 | `--order-by` | `last_onchain`, `first_onchain`, `net_worth_usd`, `updated_at`, `tx_count`, `first_seen`, `last_seen`, `num_sessions`, `revenue`, `volume`, `points` |
@@ -115,12 +118,15 @@ Search wallet profiles with filters, sorting, and pagination. Returns a `Paginat
 
 ```bash
 formo profiles search --size 10
+formo profiles search --address 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045 --timestamp 2025-06-21T10:03:00Z
 formo profiles search --order-by net_worth_usd --order-dir desc --size 5
 formo profiles search --page 2 --size 20
 formo profiles search --filters '[{"field":"users.net_worth_usd","op":"gt","value":10000}]' --size 20
 formo profiles search --filters '[{"field":"users.net_worth_usd","op":"gt","value":10000},{"field":"users.volume","op":"gt","value":1000}]' --logic or --size 20
 formo profiles search --filters '[{"field":"chains.balance","op":"gt","value":1000,"chain_id":"1"}]' --size 20
 ```
+
+With `--timestamp`, wallet-enrichment fields come from the stored snapshot closest to that instant. Exact ties select the later snapshot. Expanded chains, apps, and tokens come from the selected profiling batch, while project engagement fields, identity overrides, and labels remain current. `profiles search --timestamp` requires `--address`.
 
 ### Lifecycle tuning (advanced)
 

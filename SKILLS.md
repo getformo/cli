@@ -51,6 +51,7 @@ Fetch the full profile for a single wallet by address or ENS name.
 ```bash
 formo profiles get <address>
 formo profiles get <address> --expand labels,chains,apps,tokens
+formo profiles get <address> --timestamp 2025-06-21T10:03:00Z
 ```
 
 | Argument | Description |
@@ -60,6 +61,7 @@ formo profiles get <address> --expand labels,chains,apps,tokens
 | Option | Description |
 |---|---|
 | `--expand` | Comma-separated fields to include in full: `apps`, `chains`, `tokens`, `labels` |
+| `--timestamp` | ISO-8601 timestamp; return the closest stored wallet-enrichment snapshot |
 
 **Examples:**
 ```bash
@@ -84,6 +86,7 @@ formo profiles search [options]
 |---|---|---|
 | `--address` | `string` | Filter to a specific wallet address |
 | `--search` | `string` | Free-text search across address and identity fields |
+| `--timestamp` | `string` | ISO-8601 timestamp; requires `--address` and returns the closest stored wallet-enrichment snapshot |
 | `--page` | `number` | Page number (1-indexed, default `1`) |
 | `--size` | `number` | Page size (default `100`, max `1000`) |
 | `--order-by` | see below | Field to sort by |
@@ -98,6 +101,9 @@ formo profiles search [options]
 ```bash
 # First 10 profiles
 formo profiles search --size 10
+
+# Closest stored snapshot for one wallet
+formo profiles search --address 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045 --timestamp 2025-06-21T10:03:00Z
 
 # Top 5 by net worth (descending)
 formo profiles search --order-by net_worth_usd --order-dir desc --size 5
