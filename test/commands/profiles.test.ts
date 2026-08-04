@@ -57,6 +57,12 @@ describe('commands/profiles', function () {
         searchProfilesRun({ filters: '{"field":"x"}' }),
       ).to.throw(/filters/);
     });
+
+    it('requires an address for historical snapshot searches', function () {
+      expect(() =>
+        searchProfilesRun({ timestamp: '2025-06-21T10:03:00Z' }),
+      ).to.throw(/timestamp.*address/);
+    });
   });
 
   describe('updateProfileRun() — local validation', function () {

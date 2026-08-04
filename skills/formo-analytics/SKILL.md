@@ -72,6 +72,7 @@ Use a direct lookup for one address or ENS name. Use search for cohorts, orderin
 
 ```bash
 formo profiles get vitalik.eth --expand labels,chains,tokens
+formo profiles get vitalik.eth --timestamp 2025-06-21T10:03:00Z
 formo profiles search --order-by net_worth_usd --order-dir desc --size 10
 formo profiles search \
   --filters '[{"field":"users.net_worth_usd","op":"gt","value":10000}]' \
@@ -81,6 +82,8 @@ formo profiles search \
 Always use canonical filter paths: `users.<attribute>` (e.g. `users.net_worth_usd`), or one of the four resource fields — `chains.balance`, `apps.balance`, `tokens.balance`, `labels.value` — with the resource identified by a named qualifier (`chain_id`, `app_id`, `token_address`, `tag_id`) alongside `field`/`op`/`value`. A bare field such as `net_worth_usd` may be ignored, and identifier-in-path spellings such as `chains.1.balance` or `labels.<source>.<tag>` are rejected with a `400`.
 
 Profile updates, label changes, and wallet imports require `profiles:write`. Preserve pagination metadata and continue only while `has_more` is true.
+
+Use `--timestamp <ISO-8601>` with `profiles get` to return the stored wallet-enrichment snapshot closest to that instant. `profiles search --timestamp` supports the same lookup but requires `--address`. If two snapshots are equally close, the later snapshot is returned. Project engagement fields, identity overrides, and labels remain current.
 
 ## Manage Formo resources
 

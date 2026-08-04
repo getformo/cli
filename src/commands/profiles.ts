@@ -26,6 +26,7 @@ export interface LifecycleThresholdOptions {
 
 export interface GetProfileOptions extends LifecycleThresholdOptions {
   expand?: string
+  timestamp?: string
 }
 
 function addLifecycleThresholdParams(
@@ -87,6 +88,11 @@ const lifecycleThresholdOptions = {
     .describe('Override lifecycle at-risk prior active days threshold'),
 }
 
+const profileTimestampOption = z
+  .string()
+  .datetime({ offset: true })
+  .optional()
+
 export function getProfileRun(
   address: string,
   optionsOrExpand: GetProfileOptions | string = {},
@@ -99,6 +105,7 @@ export function getProfileRun(
       : optionsOrExpand
   const params: Record<string, string | number> = {}
   if (options.expand) params.expand = options.expand
+  if (options.timestamp) params.timestamp = options.timestamp
   addLifecycleThresholdParams(params, options)
   return client.get(`/v0/profiles/${encodeURIComponent(address)}`, { params })
 }
@@ -113,6 +120,9 @@ profiles.command('get', {
       .string()
       .optional()
       .describe('Comma-separated list of fields to expand: apps,chains,tokens,labels'),
+    timestamp: profileTimestampOption.describe(
+      'Return the wallet-enrichment snapshot closest to this ISO-8601 timestamp',
+    ),
     ...lifecycleThresholdOptions,
   }),
   examples: [
@@ -121,6 +131,11 @@ profiles.command('get', {
       args: { address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045' },
       options: { expand: 'labels,chains' },
       description: 'Get profile with expanded labels and chains',
+    },
+    {
+      args: { address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045' },
+      options: { timestamp: '2025-06-21T10:03:00Z' },
+      description: 'Get the closest stored wallet-enrichment snapshot',
     },
   ],
   hint: 'Requires profiles:read scope on your API key.',
@@ -132,6 +147,7 @@ profiles.command('get', {
 export interface SearchProfilesOptions extends LifecycleThresholdOptions {
   address?: string
   search?: string
+  timestamp?: string
   page?: number
   size?: number
   orderBy?: string
@@ -326,12 +342,17 @@ export function parseSearchFilters(raw: string): unknown[] {
 }
 
 export function searchProfilesRun(options: SearchProfilesOptions) {
+  if (options.timestamp && !options.address) {
+    throw new Error('--timestamp requires --address')
+  }
+
   requireApiKey()
   const client = createClient()
 
   const params: Record<string, string | number> = {}
   if (options.address) params.address = options.address
   if (options.search) params.search = options.search
+  if (options.timestamp) params.timestamp = options.timestamp
   if (options.page !== undefined) params.page = options.page
   if (options.size !== undefined) params.size = options.size
   if (options.orderBy) params.order_by = options.orderBy
@@ -361,6 +382,9 @@ profiles.command('search', {
   options: z.object({
     address: z.string().optional().describe('Filter by wallet address'),
     search: z.string().optional().describe('Free-text search across address and identity fields'),
+    timestamp: profileTimestampOption.describe(
+      'Return the closest wallet-enrichment snapshot; requires --address',
+    ),
     page: z.coerce
       .number()
       .int()
@@ -423,6 +447,13 @@ profiles.command('search', {
   }),
   examples: [
     { options: { size: 10 }, description: 'List first 10 profiles' },
+    {
+      options: {
+        address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+        timestamp: '2025-06-21T10:03:00Z',
+      },
+      description: 'Search the closest stored wallet-enrichment snapshot',
+    },
     {
       options: { orderBy: 'net_worth_usd', orderDir: 'desc', size: 5 },
       description: 'Top 5 profiles by net worth',
