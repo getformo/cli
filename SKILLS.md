@@ -243,7 +243,7 @@ formo analytics top_wallets --date-from 2026-04-01 --date-to 2026-04-30 --params
 formo analytics retention --filters '[{"field":"location","op":"eq","value":"US"}]'
 ```
 
-Each pipe accepts pipe-specific params via `--params` (see each command's `--help`): e.g. `funnel` → `steps`, `window_seconds`, `funnel_type`, `group_by`, `limit`, `attribution`; `kpis` → `group_by`, `limit`; `top_*` → `limit`, `offset`.
+Each pipe accepts pipe-specific params via `--params` (see each command's `--help`): e.g. `funnel` → `steps`, `window_seconds`, `funnel_type`, `group_by`, `limit`, `attribution`; `kpis` → `group_by`, `limit`; `revenue_overview` → `group_by`, `rank_by`, `limit`; `revenue_by_metric` / `volume_by_metric` → `metric_column`, `limit`, `offset`; `top_*` → `limit`, `offset`. The revenue pipes accept `paid_source` (acquiring ad network) for `group_by` / `metric_column`, alongside `channel_type` / `channel`.
 
 On `kpis`, `top_*`, `revenue_*` and `volume_by_metric`, `--params '{"page_scope":"session"}'` widens a `page` filter from page-scoped metrics (the default) to the legacy session scope.
 
