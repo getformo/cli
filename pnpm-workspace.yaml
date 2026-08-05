@@ -1,5 +1,6 @@
-minimumReleaseAge: 2880
+minimumReleaseAge: 10080
 blockExoticSubdeps: true
+trustPolicy: no-downgrade
 
 overrides:
   serialize-javascript: '>=7.0.5'
