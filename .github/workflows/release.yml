@@ -91,7 +91,7 @@ jobs:
           name: npm-package
           path: ${{ runner.temp }}/package/*.tgz
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
 
   publish:
     name: Publish approved tarball
@@ -122,7 +122,7 @@ jobs:
 
       - name: Verify tarball identity and lifecycle hooks
         run: |
-          mapfile -t TARBALLS < <(find package -maxdepth 1 -name '*.tgz' -type f)
+          mapfile -t TARBALLS < <(find "$PWD/package" -maxdepth 1 -name '*.tgz' -type f)
           test "${#TARBALLS[@]}" -eq 1 || { echo "Expected exactly one tarball"; exit 1; }
           mkdir inspect
           tar -xzf "${TARBALLS[0]}" -C inspect
@@ -135,6 +135,7 @@ jobs:
             if (pkg.scripts?.[hook]) throw new Error(`Forbidden lifecycle hook: ${hook}`)
           }
           NODE
+          test ! -f inspect/package/binding.gyp || { echo "Forbidden implicit install hook: binding.gyp"; exit 1; }
           echo "tarball=${TARBALLS[0]}" >> "$GITHUB_ENV"
 
       - name: Publish with OIDC provenance
