@@ -3,7 +3,8 @@ import { listBoardsRun } from '../../src/commands/boards';
 import { listChartsRun, getChartRun, createChartRun, updateChartRun } from '../../src/commands/charts';
 import { requiresLiveApi } from '../helpers/liveApi';
 
-// Response shape: PaginatedResponse<Chart> + { board, warnings? } for list,
+// Response shape: PaginatedResponse<ChartSummary> for list (summaries default;
+//                 with results=true: PaginatedResponse<Chart> + { board, warnings? }),
 //                 Chart for get (bare resource — no envelope).
 
 describe('commands/charts', function () {
@@ -20,19 +21,35 @@ describe('commands/charts', function () {
     });
 
     describe('listChartsRun()', function () {
-      it('returns paginated charts for a board with the parent board', async function () {
+      it('returns paginated chart summaries by default (no board, no results)', async function () {
         if (!boardId) return this.skip();
         const res = await listChartsRun(boardId) as {
-          data: { id: string }[];
-          board: { id: string };
+          data: Record<string, unknown>[];
           total: number;
           has_more: boolean;
         };
         expect(res.data).to.be.an('array');
-        expect(res.board).to.have.property('id');
+        // Summaries: the parent board and per-chart query/results only ship
+        // with results=true — listing must never silently execute charts.
+        expect(res).to.not.have.property('board');
         expect(res).to.have.property('total');
         expect(res).to.have.property('has_more');
-        if (res.data.length > 0) firstChartId = res.data[0].id;
+        for (const row of res.data) {
+          expect(row).to.not.have.property('query');
+          expect(row).to.not.have.property('results');
+        }
+        if (res.data.length > 0) firstChartId = res.data[0].id as string;
+      });
+
+      it('returns executed charts with the parent board when results=true', async function () {
+        if (!boardId) return this.skip();
+        this.timeout(30000); // executes every chart query on the board
+        const res = await listChartsRun(boardId, { size: 2 }, true) as {
+          data: { id: string }[];
+          board: { id: string };
+        };
+        expect(res.data).to.be.an('array');
+        expect(res.board).to.have.property('id');
       });
     });
 
