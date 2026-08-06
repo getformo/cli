@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { buildAlertBody, buildTestAlertBody } from '../../src/commands/alerts';
+import { buildAlertBody } from '../../src/commands/alerts';
 import { buildBoardBody } from '../../src/commands/boards';
 import {
   buildChartBody,
@@ -7,7 +7,6 @@ import {
 } from '../../src/commands/charts';
 import {
   buildCreateContractBody,
-  buildUpdateContractPipelineBody,
   buildUpdateContractBody,
 } from '../../src/commands/contracts';
 import { buildImportBody } from '../../src/commands/import';
@@ -103,21 +102,6 @@ describe('commands / body builders', function () {
         slackPropertyKeys: '["revenue","chain_id"]',
       });
       expect(body.slack_property_keys).to.deep.equal(['revenue', 'chain_id']);
-    });
-  });
-
-  describe('buildTestAlertBody()', function () {
-    it('parses sample objects and recipient overrides', function () {
-      const body = buildTestAlertBody({
-        sampleEvent: '{"event":"transaction"}',
-        sampleUser: '{"address":"0xabc"}',
-        recipientOverrides: '[{"type":"email","value":["a@b.com"]}]',
-      });
-      expect(body).to.deep.equal({
-        sampleEvent: { event: 'transaction' },
-        sampleUser: { address: '0xabc' },
-        recipientOverrides: [{ type: 'email', value: ['a@b.com'] }],
-      });
     });
   });
 
@@ -237,14 +221,6 @@ describe('commands / body builders', function () {
         includeInPipeline: true,
       });
       expect(body).to.include({ include_in_pipeline: true });
-    });
-  });
-
-  describe('buildUpdateContractPipelineBody()', function () {
-    it('maps includeInPipeline to include_in_pipeline', function () {
-      expect(buildUpdateContractPipelineBody(false)).to.deep.equal({
-        include_in_pipeline: false,
-      });
     });
   });
 
