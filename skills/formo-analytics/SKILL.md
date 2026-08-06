@@ -50,7 +50,7 @@ Useful MCP tools include:
 
 - `list_endpoints`, `list_datasources`
 - `text_to_sql`, `execute_query`, `explore_data`
-- published tools such as `kpis`, `lifecycle`, `top_events`, `top_pages`, `top_sources`, `top_locations`, `revenue_overview`, `wallet_profiles`, and `project_retention`
+- published tools such as `kpis`, `lifecycle`, `top_events`, `top_pages`, `top_sources`, `top_locations`, `revenue_overview`, `retention`, and `search_profile`
 - `search_formo_docs` and `query_docs_filesystem_formo_docs` for grounded product and API questions
 
 The live endpoint list varies by project. Prefer discovery over assuming a tool exists.
@@ -86,6 +86,8 @@ Profile updates, label changes, and wallet imports require `profiles:write`. Pre
 Use `--timestamp <ISO-8601>` with `profiles get` to return the stored wallet-enrichment snapshot closest to that instant. `profiles search --timestamp` supports the same lookup but requires `--address`. If two snapshots are equally close, the later snapshot is returned. Project engagement fields, identity overrides, and labels remain current.
 
 ## Manage Formo resources
+
+The MCP server exposes management tools for the same resources — alerts (including `test_alert`), boards/charts (including `reorder_charts` and `execute_saved_chart`), contracts (including `list_contract_recommendations`), segments, profile writes, and wallet import — each gated on the matching `*:read`/`*:write` scope, with destructive tools requiring `"confirm": true`.
 
 Use CLI command groups for operational resources:
 
