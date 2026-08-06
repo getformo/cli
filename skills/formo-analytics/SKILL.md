@@ -87,11 +87,11 @@ Use `--timestamp <ISO-8601>` with `profiles get` to return the stored wallet-enr
 
 ## Manage Formo resources
 
-The MCP server exposes management tools for the same resources — alerts (including `test_alert`), boards/charts (including `reorder_charts` and `execute_saved_chart`), contracts (including `list_contract_recommendations`), segments, profile writes, and wallet import — each gated on the matching `*:read`/`*:write` scope, with destructive tools requiring `"confirm": true`.
+The MCP server exposes management tools for the same resources — alerts, boards/charts (including `reorder_charts` and `execute_saved_chart`), contracts, segments, profile writes, and wallet import — each gated on the matching `*:read`/`*:write` scope, with destructive tools requiring `"confirm": true`.
 
 Use CLI command groups for operational resources:
 
-- `formo alerts` for alert list/get/create/update/delete/toggle/test
+- `formo alerts` for alert list/get/create/update/delete/toggle
 - `formo boards` and `formo charts` for dashboards and visualizations
 - `formo contracts` for tracked contract configuration and pipeline inclusion
 - `formo segments` for saved audiences

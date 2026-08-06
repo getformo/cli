@@ -134,29 +134,43 @@ const chartBodyOptions = z.object({
 export function listChartsRun(
   boardId: string,
   options: PaginationOptions = {},
+  results = false,
 ) {
   requireApiKey()
   const client = createClient()
   return client.get(`/v0/boards/${encodeURIComponent(boardId)}/charts/`, {
-    params: buildPaginationParams(options),
+    params: {
+      ...buildPaginationParams(options),
+      // The public API returns lightweight summaries unless asked to execute.
+      ...(results ? { include: 'results' } : {}),
+    },
   })
 }
 
 charts.command('list', {
-  description: 'List all charts for a board, including executed results',
+  description:
+    'List charts for a board (summaries by default; --results executes each chart query)',
   options: z.object({
     boardId: z.string().describe('Board ID to list charts from'),
+    results: z
+      .boolean()
+      .optional()
+      .describe('Execute each chart query and include results (slower)'),
     ...paginationOptionsSchema,
   }),
   examples: [
     {
       options: { boardId: 'board_abc123' },
-      description: 'List all charts in a board',
+      description: 'List chart summaries for a board',
+    },
+    {
+      options: { boardId: 'board_abc123', results: true },
+      description: 'List charts with executed query results',
     },
   ],
   hint: 'Requires boards:read scope on your API key.',
   run({ options }) {
-    return listChartsRun(options.boardId, options)
+    return listChartsRun(options.boardId, options, options.results ?? false)
   },
 })
 
@@ -168,7 +182,8 @@ export function listChartSummariesRun(
 ) {
   requireApiKey()
   const client = createClient()
-  return client.get(`/v0/boards/${encodeURIComponent(boardId)}/charts/meta`, {
+  // Summaries are the list endpoint's default; /charts/meta is internal-only.
+  return client.get(`/v0/boards/${encodeURIComponent(boardId)}/charts/`, {
     params: buildPaginationParams(options),
   })
 }

@@ -1,7 +1,7 @@
 import { Cli, z } from 'incur'
 import { createClient, requireApiKey } from '../lib/client'
 import { isCanonicalFilterOperator } from '../lib/filters'
-import { parseJsonArray, parseJsonObject } from '../lib/json'
+import { parseJsonArray } from '../lib/json'
 import {
   buildPaginationParams,
   paginationOptionsSchema,
@@ -262,70 +262,3 @@ alerts.command('toggle', {
   },
 })
 
-// ── Test alert delivery ──
-
-export interface TestAlertOptions {
-  sampleEvent?: string
-  sampleUser?: string
-  recipientOverrides?: string
-}
-
-export function buildTestAlertBody(options: TestAlertOptions) {
-  const body: Record<string, unknown> = {}
-  if (options.sampleEvent !== undefined) {
-    body.sampleEvent = parseJsonObject(options.sampleEvent, '--sample-event')
-  }
-  if (options.sampleUser !== undefined) {
-    body.sampleUser = parseJsonObject(options.sampleUser, '--sample-user')
-  }
-  if (options.recipientOverrides !== undefined) {
-    body.recipientOverrides = parseJsonArray(
-      options.recipientOverrides,
-      '--recipient-overrides',
-    )
-  }
-  return Object.keys(body).length > 0 ? body : undefined
-}
-
-export function testAlertRun(alertId: string, options: TestAlertOptions = {}) {
-  requireApiKey()
-  const client = createClient()
-  return client.post(
-    `/v0/alerts/${encodeURIComponent(alertId)}/test`,
-    buildTestAlertBody(options),
-  )
-}
-
-alerts.command('test', {
-  description: 'Send a test delivery for an alert',
-  args: z.object({
-    alertId: z.string().describe('Alert ID to test'),
-  }),
-  options: z.object({
-    sampleEvent: z
-      .string()
-      .optional()
-      .describe('Optional JSON object to use as the sample event'),
-    sampleUser: z
-      .string()
-      .optional()
-      .describe('Optional JSON object to use as the sample user/profile'),
-    recipientOverrides: z
-      .string()
-      .optional()
-      .describe('Optional JSON array of recipient objects to test instead of saved recipients'),
-  }),
-  examples: [
-    {
-      args: { alertId: 'alert_abc123' },
-      options: {
-        sampleEvent: '{"event":"transaction","revenue":250}',
-      },
-      description: 'Send a test alert with a sample event',
-    },
-  ],
-  hint: 'Requires alerts:write scope on your API key.',
-  run({ args, options }) {
-    return testAlertRun(args.alertId, options)
-  },
-})

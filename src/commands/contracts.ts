@@ -11,7 +11,7 @@ export type { PaginationOptions }
 
 export const contracts = Cli.create('contracts', {
   description:
-    'Smart contract commands — register, list, recommend, update, toggle pipeline inclusion, and remove tracked contracts',
+    'Smart contract commands — register, list, update, and remove tracked contracts',
 })
 
 function parseChain(chain: string | number) {
@@ -51,50 +51,6 @@ export function getContractRun(chain: string, address: string) {
     `/v0/contracts/${parseChain(chain)}/${encodeURIComponent(address)}`,
   )
 }
-
-// ── Recommended contracts ──
-
-export function getContractRecommendationsRun() {
-  requireApiKey()
-  const client = createClient()
-  return client.get('/v0/contracts/recommendations')
-}
-
-contracts.command('recommendations', {
-  description:
-    'List contracts the project already interacts with but has not added yet',
-  options: z.object({}),
-  examples: [
-    {
-      description: 'Show recommended contracts to add for decoding/monitoring',
-    },
-  ],
-  hint: 'Requires contracts:read scope on your API key.',
-  run() {
-    return getContractRecommendationsRun()
-  },
-})
-
-contracts.command('get', {
-  description: 'Get a tracked contract by chain and address',
-  args: z.object({
-    chain: z.string().describe('Chain ID'),
-    address: z.string().describe('Contract address (0x...)'),
-  }),
-  examples: [
-    {
-      args: {
-        chain: '1',
-        address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-      },
-      description: 'Get a tracked USDC contract',
-    },
-  ],
-  hint: 'Requires contracts:read scope on your API key.',
-  run({ args }) {
-    return getContractRun(args.chain, args.address)
-  },
-})
 
 // ── Create a contract ──
 
@@ -240,57 +196,6 @@ contracts.command('update', {
   hint: 'Requires contracts:write scope on your API key.',
   run({ args, options }) {
     return updateContractRun(args.chain, args.address, options)
-  },
-})
-
-// ── Toggle contract pipeline inclusion ──
-
-export function updateContractPipelineRun(
-  chain: string,
-  address: string,
-  includeInPipeline: boolean,
-) {
-  requireApiKey()
-  const client = createClient()
-  return client.patch(
-    `/v0/contracts/${parseChain(chain)}/${encodeURIComponent(address)}/pipeline`,
-    buildUpdateContractPipelineBody(includeInPipeline),
-  )
-}
-
-export function buildUpdateContractPipelineBody(includeInPipeline: boolean) {
-  return { include_in_pipeline: includeInPipeline }
-}
-
-contracts.command('pipeline', {
-  description:
-    'Toggle whether a tracked contract is included in the project events pipeline',
-  args: z.object({
-    chain: z.string().describe('Chain ID'),
-    address: z.string().describe('Contract address (0x...)'),
-  }),
-  options: z.object({
-    includeInPipeline: z
-      .boolean()
-      .describe('true to include the contract in the pipeline, false to exclude it'),
-  }),
-  examples: [
-    {
-      args: {
-        chain: '1',
-        address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-      },
-      options: { includeInPipeline: false },
-      description: 'Keep ABI decoding but exclude this contract from pipeline deploys',
-    },
-  ],
-  hint: 'Requires contracts:write scope on your API key.',
-  run({ args, options }) {
-    return updateContractPipelineRun(
-      args.chain,
-      args.address,
-      options.includeInPipeline,
-    )
   },
 })
 
