@@ -247,13 +247,6 @@ Toggle an alert between `active` and `inactive`.
 formo alerts toggle alert_abc123 --status inactive
 ```
 
-### `alerts test <alertId>`
-Send a test alert delivery with optional sample payloads.
-
-```bash
-formo alerts test alert_abc123 --sample-event '{"event":"transaction","revenue":250}'
-```
-
 ---
 
 ## `formo boards`
@@ -296,7 +289,7 @@ Delete a board.
 Chart commands. Charts live inside a board. Requires `boards:read` / `boards:write`.
 
 ### `charts list --board-id <boardId>`
-List all charts in a board.
+List charts in a board. Returns lightweight summaries by default; pass `--results` to execute each chart’s query and include full results.
 
 ### `charts get <chartId> --board-id <boardId>`
 Get a single chart by ID.
@@ -348,8 +341,6 @@ List all tracked contracts. Returns `{ data: Contract[], deploy: { last_deployed
 ### `contracts get <chain> <address>`
 Get a single tracked contract.
 
-### `contracts recommendations`
-List contracts the project already interacts with but has not added yet.
 
 ### `contracts create`
 
@@ -379,8 +370,6 @@ formo contracts create --address 0x1f9840a85d5af5bf1d1762f925bdaddc4201f984 --ch
 | `--start-block` | Optional start block |
 | `--include-in-pipeline` | Include or exclude this contract from the Goldsky events pipeline |
 
-### `contracts pipeline <chain> <address> --include-in-pipeline <true|false>`
-Toggle pipeline inclusion without re-sending the full ABI/events payload.
 
 ### `contracts delete <chain> <address>`
 Remove a tracked contract.
