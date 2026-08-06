@@ -52,6 +52,27 @@ export function getContractRun(chain: string, address: string) {
   )
 }
 
+contracts.command('get', {
+  description: 'Get a tracked contract by chain and address',
+  args: z.object({
+    chain: z.string().describe('Chain ID'),
+    address: z.string().describe('Contract address (0x...)'),
+  }),
+  examples: [
+    {
+      args: {
+        chain: '1',
+        address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+      },
+      description: 'Get a tracked USDC contract',
+    },
+  ],
+  hint: 'Requires contracts:read scope on your API key.',
+  run({ args }) {
+    return getContractRun(args.chain, args.address)
+  },
+})
+
 // ── Create a contract ──
 
 export interface CreateContractOptions {
