@@ -345,11 +345,6 @@ formo alerts toggle alert_abc123 --status inactive
 formo alerts toggle alert_abc123 --status active
 ```
 
-### Test alert delivery
-
-```bash
-formo alerts test <alertId> --sample-event '{"event":"transaction","revenue":250}'
-```
 
 ---
 
@@ -417,8 +412,11 @@ Manage charts within dashboard boards. Charts are visualizations of analytics da
 
 ### List charts in a board
 
+Returns lightweight summaries by default; pass `--results` to execute each chart’s query and include full results.
+
 ```bash
 formo charts list --board-id <boardId>
+formo charts list --board-id <boardId> --results
 ```
 
 > Requires `boards:read` scope.
@@ -513,15 +511,6 @@ formo contracts get <chain> <address>
 
 > Requires `contracts:read` scope.
 
-### Get recommended contracts
-
-```bash
-formo contracts recommendations
-```
-
-Lists contracts the project already interacts with but has not added yet.
-
-> Requires `contracts:read` scope.
 
 ### Register a contract
 
@@ -566,11 +555,11 @@ formo contracts update <chain> <address> --name <name> --abi '<json>' --events '
 
 ### Toggle pipeline inclusion
 
-```bash
-formo contracts pipeline <chain> <address> --include-in-pipeline false
-```
+Use `contracts update` with `--include-in-pipeline` when a contract should remain registered for ABI decoding but be excluded from pipeline deploys:
 
-Use this when a contract should remain registered for ABI decoding but be excluded from pipeline deploys.
+```bash
+formo contracts update <chain> <address> --include-in-pipeline false
+```
 
 > Requires `contracts:write` scope.
 
