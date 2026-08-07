@@ -2,6 +2,7 @@ import { expect } from 'chai';
 import {
   batchCreateProfileLabelsRun,
   batchUpdateProfilesRun,
+  buildUpdateProfileBody,
   createProfileLabelRun,
   deleteProfileLabelRun,
   getProfileRun,
@@ -82,6 +83,45 @@ describe('commands/profiles', function () {
       expect(() =>
         updateProfileRun(KNOWN_ADDRESS, { properties: '{}' }),
       ).to.throw(/at least one key/);
+    });
+
+    it('throws when neither --properties nor --unset is provided', function () {
+      expect(() => updateProfileRun(KNOWN_ADDRESS, {})).to.throw(
+        /properties.*unset/,
+      );
+    });
+
+    it('throws when --unset is only commas/whitespace', function () {
+      expect(() =>
+        updateProfileRun(KNOWN_ADDRESS, { unset: ' , ,' }),
+      ).to.throw(/--unset/);
+    });
+
+    it('throws when --unset includes user_id', function () {
+      expect(() =>
+        updateProfileRun(KNOWN_ADDRESS, { unset: 'email,user_id' }),
+      ).to.throw(/user_id cannot be unset/);
+    });
+
+    it('maps --unset keys to null values in the request body', function () {
+      expect(
+        buildUpdateProfileBody({ unset: 'email, twitter' }),
+      ).to.deep.equal({ email: null, twitter: null });
+    });
+
+    it('merges --properties values with --unset nulls (unset wins on overlap)', function () {
+      expect(
+        buildUpdateProfileBody({
+          properties: '{"display_name":"alice.eth","email":"a@x.co"}',
+          unset: 'email',
+        }),
+      ).to.deep.equal({ display_name: 'alice.eth', email: null });
+    });
+
+    it('passes explicit null values in --properties through unchanged', function () {
+      expect(
+        buildUpdateProfileBody({ properties: '{"email":null}' }),
+      ).to.deep.equal({ email: null });
     });
   });
 

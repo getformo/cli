@@ -504,13 +504,33 @@ profiles.command('search', {
 // ── Update profile (merge identity properties) ──
 
 export interface UpdateProfileOptions {
-  properties: string
+  properties?: string
+  unset?: string
 }
 
 export function buildUpdateProfileBody(options: UpdateProfileOptions) {
-  const body = parseJsonObject(options.properties, '--properties')
+  const body: Record<string, unknown> = options.properties
+    ? parseJsonObject(options.properties, '--properties')
+    : {}
+  if (options.unset) {
+    const keys = options.unset
+      .split(',')
+      .map((key) => key.trim())
+      .filter((key) => key.length > 0)
+    if (keys.length === 0) {
+      throw new Error('--unset must list at least one property key')
+    }
+    for (const key of keys) {
+      if (key === 'user_id') {
+        throw new Error(
+          'user_id cannot be unset (it participates in identity stitching)',
+        )
+      }
+      body[key] = null
+    }
+  }
   if (Object.keys(body).length === 0) {
-    throw new Error('--properties must contain at least one key')
+    throw new Error('provide --properties and/or --unset with at least one key')
   }
   return body
 }
@@ -535,8 +555,15 @@ profiles.command('update', {
   options: z.object({
     properties: z
       .string()
+      .optional()
       .describe(
-        'JSON object of properties to merge. Allowed keys: user_id, display_name, email, farcaster, discord, twitter, telegram, instagram, website, github, linkedin, facebook, tiktok, youtube, reddit, avatar, description, location, ens, lens, basenames, linea',
+        'JSON object of properties to merge; a null value unsets (deletes) that property. Allowed keys: user_id, display_name, email, farcaster, discord, twitter, telegram, instagram, website, github, linkedin, facebook, tiktok, youtube, reddit, avatar, description, location, ens, lens, basenames, linea',
+      ),
+    unset: z
+      .string()
+      .optional()
+      .describe(
+        'Comma-separated property keys to unset (delete), e.g. "email,twitter". Shorthand for null values in --properties. user_id cannot be unset.',
       ),
   }),
   examples: [
@@ -552,8 +579,18 @@ profiles.command('update', {
       options: { properties: '{"email":"alice@example.com"}' },
       description: 'Set just the email',
     },
+    {
+      args: { address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045' },
+      options: { unset: 'email,twitter' },
+      description: 'Delete the email and Twitter properties',
+    },
+    {
+      args: { address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045' },
+      options: { properties: '{"display_name":"alice.eth"}', unset: 'email' },
+      description: 'Set a new display name and delete the email in one call',
+    },
   ],
-  hint: 'Requires profiles:write scope on your API key. Only the listed keys are accepted; unknown keys are rejected.',
+  hint: 'Requires profiles:write scope on your API key. Only the listed keys are accepted; unknown keys are rejected. Deleting a property hides any globally-enriched fallback value too; user_id cannot be unset.',
   run({ args, options }) {
     return updateProfileRun(args.address, options)
   },
@@ -599,7 +636,7 @@ profilesProperties.command('batch', {
     rows: z
       .string()
       .describe(
-        'JSON array of flat {address,...properties} objects. ENS names are not resolved in batch requests.',
+        'JSON array of flat {address,...properties} objects; a null value unsets (deletes) that property (user_id cannot be unset). ENS names are not resolved in batch requests.',
       ),
   }),
   examples: [
@@ -608,6 +645,12 @@ profilesProperties.command('batch', {
         rows: '[{"address":"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045","display_name":"alice.eth","email":"alice@example.com"}]',
       },
       description: 'Batch set display names and emails',
+    },
+    {
+      options: {
+        rows: '[{"address":"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045","email":null}]',
+      },
+      description: 'Batch delete emails (null unsets a property)',
     },
   ],
   hint: 'Requires profiles:write scope on your API key. Unknown keys are ignored by the API; invalid rows are quarantined.',
