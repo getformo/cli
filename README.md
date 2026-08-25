@@ -265,7 +265,7 @@ Get a single board by ID.
 |---|---|
 | `--title` | Board title |
 | `--description` | Optional board description |
-| `--is-public` | Make the board publicly viewable |
+| `--is-public` | Make the board publicly viewable. Omit to keep it private (the default). |
 
 ```bash
 formo boards create --title "Revenue Metrics" --description "Weekly revenue tracking"
@@ -277,7 +277,7 @@ formo boards create --title "Revenue Metrics" --description "Weekly revenue trac
 |---|---|
 | `--title` | New board title |
 | `--description` | New board description |
-| `--is-public` | Update public visibility |
+| `--is-public` | Make the board publicly viewable. Omit to keep the stored setting; pass `--is-public=false` to make it private. |
 
 ### `boards delete <boardId>`
 Delete a board.
@@ -352,7 +352,7 @@ Get a single tracked contract.
 | `--abi` | Contract ABI as a JSON string; sent stringified to the API |
 | `--events` | JSON array of ABI event objects to monitor |
 | `--start-block` | Optional start block |
-| `--include-in-pipeline` | Include this contract in the Goldsky events pipeline (`true` by default in the API) |
+| `--include-in-pipeline` | Deploy this contract to the events pipeline. Omit for decode-only (the default). |
 
 ```bash
 formo contracts create --address 0x1f9840a85d5af5bf1d1762f925bdaddc4201f984 --chain 1 \
@@ -368,7 +368,7 @@ formo contracts create --address 0x1f9840a85d5af5bf1d1762f925bdaddc4201f984 --ch
 | `--abi` | Updated ABI |
 | `--events` | Updated JSON array of ABI event objects |
 | `--start-block` | Optional start block |
-| `--include-in-pipeline` | Include or exclude this contract from the Goldsky events pipeline |
+| `--include-in-pipeline` | Deploy this contract to the events pipeline. Omit to keep the stored setting; pass `--include-in-pipeline=false` to exclude it. |
 
 
 ### `contracts delete <chain> <address>`
