@@ -562,8 +562,12 @@ formo contracts update <chain> <address> --name <name> --abi '<json>' --events '
 Use `contracts update` with `--include-in-pipeline` when a contract should remain registered for ABI decoding but be excluded from pipeline deploys:
 
 ```bash
-formo contracts update <chain> <address> --include-in-pipeline=false
+formo contracts update <chain> <address> --name <name> --abi '<json>' --events '<json>' \
+  --include-in-pipeline=false
 ```
+
+`contracts update` is a full replace, so `--name`, `--abi`, and `--events` are required
+here too; omitting them fails with a missing-option error.
 
 Boolean flags do not read a following value: write `--include-in-pipeline=false` or
 `--no-include-in-pipeline`. `--include-in-pipeline false` sets it to **true** and leaves
