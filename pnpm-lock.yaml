@@ -10,7 +10,7 @@ overrides:
   zod: '>=4.4.0 <5'
 
 patchedDependencies:
-  incur@0.4.26: ae18879675f35e842cb43134909e7abd7d02f4268e1d733be25fd99a79bb78d1
+  incur@0.4.26: 01acbccc58f6818ad6d5bc7dce43998ab2e03281fdfbbad0e78dce44bd9ed0e2
 
 importers:
 
@@ -21,7 +21,7 @@ importers:
         version: 1.18.0
       incur:
         specifier: 0.4.26
-        version: 0.4.26(patch_hash=ae18879675f35e842cb43134909e7abd7d02f4268e1d733be25fd99a79bb78d1)
+        version: 0.4.26(patch_hash=01acbccc58f6818ad6d5bc7dce43998ab2e03281fdfbbad0e78dce44bd9ed0e2)
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -1634,7 +1634,7 @@ snapshots:
 
   imurmurhash@0.1.4: {}
 
-  incur@0.4.26(patch_hash=ae18879675f35e842cb43134909e7abd7d02f4268e1d733be25fd99a79bb78d1):
+  incur@0.4.26(patch_hash=01acbccc58f6818ad6d5bc7dce43998ab2e03281fdfbbad0e78dce44bd9ed0e2):
     dependencies:
       '@cfworker/json-schema': 4.1.1
       '@modelcontextprotocol/server': 2.0.0-alpha.4

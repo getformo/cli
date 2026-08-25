@@ -378,7 +378,7 @@ formo boards create --title <title> [--description <desc>] [--is-public]
 |---|---|
 | `--title` | Board title |
 | `--description` | Board description (optional) |
-| `--is-public` | Whether the board is publicly viewable |
+| `--is-public` | Make the board publicly viewable. Omit to keep it private (the default). |
 
 > Requires `boards:write` scope.
 
@@ -393,6 +393,10 @@ formo boards create --title "Revenue Metrics" --description "Weekly revenue trac
 ```bash
 formo boards update <boardId> [--title <title>] [--description <desc>] [--is-public]
 ```
+
+Send at least one field. Omitted fields keep their stored value. Boolean flags do not read
+a following value: write `--is-public=false` or `--no-is-public` to make a board private,
+because `--is-public false` sets it to true.
 
 > Requires `boards:write` scope.
 
@@ -526,7 +530,7 @@ formo contracts create --address <addr> --chain <chainId> --name <name> --abi '<
 | `--abi` | Contract ABI as a JSON string |
 | `--events` | JSON array of ABI event objects to monitor |
 | `--start-block` | Optional start block |
-| `--include-in-pipeline` | Include this contract in the Goldsky events pipeline |
+| `--include-in-pipeline` | Deploy this contract to the events pipeline. Omit for decode-only (the default). |
 
 > Requires `contracts:write` scope.
 
@@ -558,8 +562,16 @@ formo contracts update <chain> <address> --name <name> --abi '<json>' --events '
 Use `contracts update` with `--include-in-pipeline` when a contract should remain registered for ABI decoding but be excluded from pipeline deploys:
 
 ```bash
-formo contracts update <chain> <address> --include-in-pipeline false
+formo contracts update <chain> <address> --name <name> --abi '<json>' --events '<json>' \
+  --include-in-pipeline=false
 ```
+
+`contracts update` is a full replace, so `--name`, `--abi`, and `--events` are required
+here too; omitting them fails with a missing-option error.
+
+Boolean flags do not read a following value: write `--include-in-pipeline=false` or
+`--no-include-in-pipeline`. `--include-in-pipeline false` sets it to **true** and leaves
+`false` as a stray argument.
 
 > Requires `contracts:write` scope.
 

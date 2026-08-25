@@ -1,13 +1,22 @@
 diff --git a/dist/Cli.js b/dist/Cli.js
-index 4b80e74d959f6508ea4de6cc79e372f111b2b6b6..5afa03b80fc5bd998b9e7d0568084b616d71bf51 100644
+index 4b80e74d959f6508ea4de6cc79e372f111b2b6b6..54c789a9e1d92b335b6135331cf28a9247d13cd8 100644
 --- a/dist/Cli.js
 +++ b/dist/Cli.js
-@@ -2723,7 +2723,7 @@ export function formatExamples(examples) {
+@@ -2722,8 +2722,15 @@ export function formatExamples(examples) {
+             for (const value of Object.values(ex.args))
                  parts.push(String(value));
          if (ex.options)
-             for (const [key, value] of Object.entries(ex.options))
+-            for (const [key, value] of Object.entries(ex.options))
 -                parts.push(`--${key} ${value}`);
-+                parts.push(`--${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)} ${value}`);
++            for (const [key, value] of Object.entries(ex.options)) {
++                const flag = `--${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`;
++                // Boolean flags don't consume the next token, so `--flag false`
++                // parses as true. Render the forms the parser actually honours.
++                if (typeof value === 'boolean')
++                    parts.push(value ? flag : `${flag}=false`);
++                else
++                    parts.push(`${flag} ${value}`);
++            }
          const result = { command: parts.join(' ') };
          if (ex.description)
              result.description = ex.description;
