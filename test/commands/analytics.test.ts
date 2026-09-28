@@ -85,15 +85,32 @@ describe('commands/analytics', function () {
     });
 
     it('rejects invalid qualifiers and keeps nested event filters as leaves', function () {
-      for (const filter of [
-        { field: 'chains.balance', op: 'gt', value: 100, chain_id: 1 },
-        { field: 'tokens.balance', op: 'gt', value: 0, scope: 'wallet' },
-        { field: 'labels.value', op: 'eq', value: 'gold', tag_id: '' },
-        { field: 'event', op: 'eq', value: 'purchase', filters: [
+      const cases: Array<[unknown, RegExp]> = [
+        [{ field: 'chains.balance', op: 'gt', value: 100, chain_id: 1 }, /chain_id must be a non-empty string/],
+        [{ field: 'tokens.balance', op: 'gt', value: 0, scope: 'wallet' }, /scope must be any or protocol/],
+        [{ field: 'labels.value', op: 'eq', value: 'gold', tag_id: '' }, /tag_id must be a non-empty string/],
+        [{ field: 'event', op: 'eq', value: 'purchase', filters: [
           { field: 'amount', op: 'gt', value: 10, chain_id: '1' },
-        ] },
-      ]) {
-        expect(() => buildAnalyticsParams({ filters: JSON.stringify([filter]) })).to.throw();
+        ] }, /may only contain field, op, value, fields/],
+      ];
+      for (const [filter, message] of cases) {
+        expect(() => buildAnalyticsParams({ filters: JSON.stringify([filter]) })).to.throw(message);
+      }
+    });
+
+    it('enforces field-specific required and forbidden resource qualifiers', function () {
+      const cases: Array<[unknown, RegExp]> = [
+        [{ field: 'apps.balance', op: 'gt', value: 0 }, /"app_id" is required/],
+        [{ field: 'tokens.balance', op: 'gt', value: 0, scope: 'any' }, /"token_address" is required/],
+        [{ field: 'tokens.balance', op: 'gt', value: 0, token_address: '0xabc' }, /"scope" is required/],
+        [{ field: 'tokens.balance', op: 'gt', value: 0, token_address: '0xabc', scope: 'protocol' }, /"app_id" is required/],
+        [{ field: 'tokens.balance', op: 'gt', value: 0, token_address: '0xabc', scope: 'any', app_id: 'aave-v3' }, /"app_id" is not valid/],
+        [{ field: 'labels.value', op: 'eq', value: 'gold' }, /"tag_id" is required/],
+        [{ field: 'chains.balance', op: 'gt', value: 0, tag_id: 'tier' }, /"tag_id" is not valid/],
+        [{ field: 'location', op: 'eq', value: 'US', chain_id: '1' }, /"chain_id" is not valid/],
+      ];
+      for (const [filter, message] of cases) {
+        expect(() => buildAnalyticsParams({ filters: JSON.stringify([filter]) })).to.throw(message);
       }
     });
 
@@ -115,6 +132,14 @@ describe('commands/analytics', function () {
       for (const fields of [[], ['first_utm_source'], ['first_utm_source', 1]]) {
         expect(() => buildAnalyticsParams({ filters: JSON.stringify([{ fields, op: 'eq', value: 'twitter' }]) }))
           .to.throw(/exactly two non-empty columns/);
+      }
+    });
+
+    it('rejects ambiguous selectors at both nesting levels', function () {
+      const ambiguous = { field: 42, fields: ['first_utm_source', 'last_utm_source'], op: 'eq', value: 'twitter' };
+      for (const filter of [ambiguous, { ...ambiguous, field: 'utm_source' }, { field: 'event', op: 'eq', value: 'purchase', filters: [ambiguous] }]) {
+        expect(() => buildAnalyticsParams({ filters: JSON.stringify([filter]) }))
+          .to.throw(/must use only one of field or fields/);
       }
     });
 

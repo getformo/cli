@@ -224,6 +224,27 @@ describe('commands / body builders', function () {
     });
   });
 
+  describe('contract start-block validation', function () {
+    const base = { name: 'Token', abi: '[]', events: '[]' };
+    for (const startBlock of [-1, 1.5, Number.MAX_SAFE_INTEGER + 1, NaN, Infinity]) {
+      it(`rejects invalid start block ${startBlock} on create and update`, function () {
+        expect(() => buildCreateContractBody({ ...base, address: '0xabc', chain: 1, startBlock }))
+          .to.throw(/--start-block must be a non-negative safe integer/);
+        expect(() => buildUpdateContractBody('1', '0xabc', { ...base, startBlock }))
+          .to.throw(/--start-block must be a non-negative safe integer/);
+      });
+    }
+    it('preserves zero, the safe upper bound, and omitted start blocks', function () {
+      for (const startBlock of [0, Number.MAX_SAFE_INTEGER]) {
+        expect(buildCreateContractBody({ ...base, address: '0xabc', chain: 1, startBlock }))
+          .to.have.property('start_block', startBlock);
+        expect(buildUpdateContractBody('1', '0xabc', { ...base, startBlock }))
+          .to.have.property('start_block', startBlock);
+      }
+      expect(buildUpdateContractBody('1', '0xabc', base)).not.to.have.property('start_block');
+    });
+  });
+
   // ── Segments ──
 
   describe('buildCreateSegmentBody()', function () {

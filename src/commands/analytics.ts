@@ -6,6 +6,7 @@ import {
   isCanonicalFilterValue,
   isEmptyMembershipArray,
   isValuelessFilterOperator,
+  validateQualifiers,
 } from '../lib/filters'
 import { parseJsonObject } from '../lib/json'
 
@@ -85,6 +86,9 @@ function validateAnalyticsFilter(
       `${path} may only contain field, op, value, fields${allowNested ? ', filters, and resource qualifiers (chain_id, app_id, token_address, scope, tag_id)' : ''}`,
     )
   }
+  if (record.field !== undefined && record.fields !== undefined) {
+    throw new Error(`${path} must use only one of field or fields`)
+  }
   if (record.fields !== undefined && (
     !Array.isArray(record.fields) || record.fields.length !== 2 ||
     !record.fields.every((field) => typeof field === 'string' && field.length > 0)
@@ -102,6 +106,7 @@ function validateAnalyticsFilter(
   if (record.scope !== undefined && record.scope !== 'any' && record.scope !== 'protocol') {
     throw new Error(`${path}.scope must be any or protocol`)
   }
+  validateQualifiers(record, typeof record.field === 'string' ? record.field : '', path)
   if (!isCanonicalFilterOperator(record.op)) {
     throw new Error(`${path} requires a canonical "op"`)
   }

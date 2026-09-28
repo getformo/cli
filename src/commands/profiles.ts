@@ -2,6 +2,8 @@ import { Cli, z } from 'incur'
 import { createClient, requireApiKey } from '../lib/client'
 import {
   isCanonicalFilterOperator,
+  QUALIFIER_KEYS,
+  validateQualifiers,
   isEmptyMembershipArray,
   isValuelessFilterOperator,
 } from '../lib/filters'
@@ -186,77 +188,12 @@ const RESOURCE_FIELD_PREFIXES = new Set([
   'labels',
 ])
 
-const QUALIFIER_KEYS = [
-  'chain_id',
-  'app_id',
-  'token_address',
-  'tag_id',
-  'scope',
-] as const
-
 const FILTER_ENTRY_KEYS = new Set<string>([
   'field',
   'op',
   'value',
   ...QUALIFIER_KEYS,
 ])
-
-/**
- * Enforce the per-field qualifier rules, mirroring the API's schema. Sending a
- * qualifier the field does not accept — or omitting a required one — is a 400,
- * so we fail here with a message that names the offending key.
- */
-function validateQualifiers(
-  record: Record<string, unknown>,
-  field: string,
-): void {
-  const present = (key: string) => record[key] !== undefined
-  const required = (key: string) => {
-    if (!present(key)) {
-      throw new Error(`--filters: "${key}" is required for "${field}"`)
-    }
-  }
-  const forbidden = (keys: readonly string[]) => {
-    for (const key of keys) {
-      if (present(key)) {
-        throw new Error(`--filters: "${key}" is not valid for "${field}"`)
-      }
-    }
-  }
-
-  switch (field) {
-    case 'chains.balance':
-      // chain_id optional — omit it to match any chain.
-      forbidden(['app_id', 'token_address', 'tag_id', 'scope'])
-      break
-    case 'apps.balance':
-      required('app_id')
-      forbidden(['token_address', 'tag_id', 'scope'])
-      break
-    case 'tokens.balance':
-      required('token_address')
-      required('scope')
-      if (record.scope !== 'any' && record.scope !== 'protocol') {
-        throw new Error(`--filters: "scope" must be "any" or "protocol"`)
-      }
-      // app_id identifies the protocol, so it is required by (and only by)
-      // scope: "protocol".
-      if (record.scope === 'protocol') {
-        required('app_id')
-      } else {
-        forbidden(['app_id'])
-      }
-      forbidden(['tag_id'])
-      break
-    case 'labels.value':
-      required('tag_id')
-      forbidden(['app_id', 'token_address', 'scope'])
-      break
-    default:
-      // users.* — a user attribute carries no resource identity.
-      forbidden(QUALIFIER_KEYS)
-  }
-}
 
 /**
  * Parse and validate the --filters JSON. Ensures it is an array of

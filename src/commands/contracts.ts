@@ -22,6 +22,13 @@ function parseChain(chain: string | number) {
   return value
 }
 
+function parseStartBlock(value: number): number {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new Error('--start-block must be a non-negative safe integer')
+  }
+  return value
+}
+
 // ── List contracts ──
 
 export function listContractsRun(options: PaginationOptions = {}) {
@@ -95,7 +102,7 @@ export function buildCreateContractBody(options: CreateContractOptions) {
     abi: JSON.stringify(parsedAbi),
     events: parsedEvents,
   }
-  if (options.startBlock !== undefined) body.start_block = options.startBlock
+  if (options.startBlock !== undefined) body.start_block = parseStartBlock(options.startBlock)
   if (options.includeInPipeline !== undefined) {
     body.include_in_pipeline = options.includeInPipeline
   }
@@ -164,7 +171,7 @@ export function buildUpdateContractBody(
     abi: JSON.stringify(parsedAbi),
     events: parsedEvents,
   }
-  if (options.startBlock !== undefined) body.start_block = options.startBlock
+  if (options.startBlock !== undefined) body.start_block = parseStartBlock(options.startBlock)
   if (options.includeInPipeline !== undefined) {
     body.include_in_pipeline = options.includeInPipeline
   }
