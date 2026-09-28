@@ -73,6 +73,51 @@ describe('commands/analytics', function () {
       ).to.equal(JSON.stringify(filters));
     });
 
+    it('preserves resource qualifiers for lifecycle and frequency filters', function () {
+      const filters = [
+        { field: 'chains.balance', op: 'gt', value: 100, chain_id: '1' },
+        { field: 'apps.balance', op: 'gte', value: 10, app_id: 'aave-v3' },
+        { field: 'tokens.balance', op: 'gt', value: 0, token_address: '0xabc', scope: 'protocol', app_id: 'aave-v3' },
+        { field: 'labels.value', op: 'eq', value: 'gold', tag_id: 'tier' },
+      ];
+      expect(buildAnalyticsParams({ filters: JSON.stringify(filters) }).filters)
+        .to.equal(JSON.stringify(filters));
+    });
+
+    it('rejects invalid qualifiers and keeps nested event filters as leaves', function () {
+      for (const filter of [
+        { field: 'chains.balance', op: 'gt', value: 100, chain_id: 1 },
+        { field: 'tokens.balance', op: 'gt', value: 0, scope: 'wallet' },
+        { field: 'labels.value', op: 'eq', value: 'gold', tag_id: '' },
+        { field: 'event', op: 'eq', value: 'purchase', filters: [
+          { field: 'amount', op: 'gt', value: 10, chain_id: '1' },
+        ] },
+      ]) {
+        expect(() => buildAnalyticsParams({ filters: JSON.stringify([filter]) })).to.throw();
+      }
+    });
+
+    it('passes funnel OR members and their filters through intact', function () {
+      const steps = [
+        { type: 'track', event: 'Swap', name: 'trade', events: [
+          { type: 'track', event: 'Limit Order', filters: [{ field: 'amount', op: 'gte', value: 100 }] },
+        ] },
+        { type: 'track', event: 'Complete', name: 'complete' },
+      ];
+      expect(buildAnalyticsParams({ params: JSON.stringify({ steps }) }).steps)
+        .to.equal(JSON.stringify(steps));
+    });
+
+    it('supports either-touch attribution pairs and rejects malformed pairs', function () {
+      const filters = [{ fields: ['first_utm_source', 'last_utm_source'], op: 'eq', value: 'twitter' }];
+      expect(buildAnalyticsParams({ filters: JSON.stringify(filters) }).filters)
+        .to.equal(JSON.stringify(filters));
+      for (const fields of [[], ['first_utm_source'], ['first_utm_source', 1]]) {
+        expect(() => buildAnalyticsParams({ filters: JSON.stringify([{ fields, op: 'eq', value: 'twitter' }]) }))
+          .to.throw(/exactly two non-empty columns/);
+      }
+    });
+
     it('rejects recursive nested filters', function () {
       expect(() =>
         buildAnalyticsParams({
@@ -201,6 +246,47 @@ describe('commands/analytics', function () {
         dateTo: '2026-01-31',
       })) as unknown;
       expect(result).to.exist;
+    });
+
+    it('accepts qualified resource filters on user-aggregate pipes', async function () {
+      await requiresLiveApi(this);
+      const filters = JSON.stringify([
+        { field: 'chains.balance', op: 'gt', value: 0, chain_id: '1' },
+        { field: 'apps.balance', op: 'gt', value: 0, app_id: 'aave-v3' },
+        { field: 'tokens.balance', op: 'gt', value: 0, token_address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', scope: 'any' },
+        { field: 'labels.value', op: 'eq', value: 'gold', tag_id: 'tier' },
+      ]);
+      for (const pipe of ['lifecycle', 'frequency']) {
+        const result = await runAnalytics(pipe, {
+          dateFrom: '2026-09-01', dateTo: '2026-09-07', filters,
+        }) as Record<string, unknown>;
+        expect(result).to.have.property('data').that.is.an('array');
+      }
+    });
+
+    it('accepts either-touch attribution filters on lifecycle', async function () {
+      await requiresLiveApi(this);
+      const result = await runAnalytics('lifecycle', {
+        dateFrom: '2026-09-01', dateTo: '2026-09-07',
+        filters: JSON.stringify([
+          { fields: ['first_utm_source', 'last_utm_source'], op: 'eq', value: 'twitter' },
+        ]),
+      }) as Record<string, unknown>;
+      expect(result).to.have.property('data').that.is.an('array');
+    });
+
+    it('accepts funnel OR groups with member-scoped predicates', async function () {
+      await requiresLiveApi(this);
+      const result = await runAnalytics('funnel', {
+        dateFrom: '2026-09-01', dateTo: '2026-09-07',
+        params: JSON.stringify({ steps: [
+          { type: 'track', event: 'Swap', name: 'trade', events: [
+            { type: 'track', event: 'Limit Order', filters: [{ field: 'amount', op: 'gte', value: 100 }] },
+          ] },
+          { type: 'track', event: 'Complete', name: 'complete' },
+        ] }),
+      }) as Record<string, unknown>;
+      expect(result).to.have.property('data').that.is.an('array');
     });
 
     // /v0/funnel and /v0/flow accept snake_case date_from/date_to — the pipes

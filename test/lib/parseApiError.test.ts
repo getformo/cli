@@ -110,6 +110,24 @@ describe('lib/client / parseApiError', function () {
     expect(err.message).to.equal('Request failed with status code 401');
   });
 
+  it('surfaces plain event-ingestion and rate-limit errors', function () {
+    for (const data of [{ error: 'Invalid request body' }, 'Too many requests']) {
+      const err = parseApiError(makeAxiosError({ status: 400, data }));
+      expect(err.message).to.equal(typeof data === 'string' ? data : data.error);
+      expect(err.code).to.be.undefined;
+      expect(err.status).to.equal(400);
+    }
+  });
+
+  it('falls back safely for null and unexpected error bodies', function () {
+    for (const data of [null, {}, { error: null }, { error: 42 }, { error: [] }]) {
+      const err = parseApiError(makeAxiosError({ status: 500, data, message: 'HTTP 500' }));
+      expect(err.message).to.equal('HTTP 500');
+      expect(err.status).to.equal(500);
+      expect(err.code).to.be.undefined;
+    }
+  });
+
   it('handles transport errors with no response', function () {
     const err = parseApiError(
       makeAxiosError({

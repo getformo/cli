@@ -49,11 +49,17 @@ Follow this sequence:
 Useful MCP tools include:
 
 - `list_endpoints`, `list_datasources`
-- `text_to_sql`, `execute_query`, `explore_data`
-- published tools such as `kpis`, `lifecycle`, `top_events`, `top_pages`, `top_sources`, `top_locations`, `revenue_overview`, `retention`, and `search_profile`
+- `text_to_sql`, `execute_query`, `call_endpoint`
+- published tools such as `kpis`, `lifecycle`, `top_events`, `top_pages`, `top_sources`, `top_locations`, `revenue_overview`, `retention`, `project_users`, `distinct_values`, `web_vitals`, and `search_profile`
 - `search_formo_docs` and `query_docs_filesystem_formo_docs` for grounded product and API questions
 
-The live endpoint list varies by project. Prefer discovery over assuming a tool exists.
+The live endpoint list varies by project. Prefer named endpoint tools; use `call_endpoint` as a low-level fallback. `explore_data` has been removed.
+
+`list_datasources` can return column schemas as JSON or Tinybird datafile text. Read the returned schemas before writing SQL; use the live tool schema for any optional arguments. Schema state is session-local and expires after five minutes; refresh discovery when needed. If `text_to_sql` fails upstream, discover schemas and write SQL for `execute_query`.
+
+`project_users`, `distinct_values`, `cohort_analysis`, and `web_vitals` are MCP extras; they are not CLI analytics subcommands or public `/v0/<pipe>` routes. Use `web_vitals` for page-speed questions: discover its parameters, use aggregate quantiles or group by page/device, and evaluate p75. For churn questions, follow lifecycle counts with `project_users` filtered to the relevant cohort and inspect acquisition source, location, device, and last event to identify a concrete segment.
+
+Retention defaults to rolling (active in week N or later). Request `retention_type: "recurring"` for activity in exactly week N. Funnel steps support `events` OR alternatives with member-scoped `filters`; primary `type`/`event` remains included and step-level filters apply to the whole group.
 
 CLI examples:
 

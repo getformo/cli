@@ -254,6 +254,11 @@ describe('commands / body builders', function () {
       });
     });
 
+    it('rejects empty imports before calling the API', function () {
+      expect(() => buildImportBody({ addresses: '[]' })).to.throw(/at least one wallet/);
+      expect(() => buildImportBody({ rows: '[]' })).to.throw(/at least one wallet/);
+    });
+
     it('derives addresses from richer import rows', function () {
       const body = buildImportBody({
         rows: '[{"address":"0xabc","properties":{"display_name":"Alice"}}]',
