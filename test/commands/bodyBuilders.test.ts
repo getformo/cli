@@ -442,6 +442,22 @@ describe('commands / body builders', function () {
       ).to.throw(/unknown property "appId".*app_id/);
     });
 
+    it('rejects non-string and empty qualifier values on profile searches', function () {
+      const cases = [
+        { field: 'chains.balance', op: 'gt', value: 0, key: 'chain_id' },
+        { field: 'apps.balance', op: 'gt', value: 0, key: 'app_id' },
+        { field: 'tokens.balance', op: 'gt', value: 0, scope: 'any', key: 'token_address' },
+        { field: 'tokens.balance', op: 'gt', value: 0, token_address: '0xabc', key: 'scope' },
+        { field: 'labels.value', op: 'eq', value: 'gold', key: 'tag_id' },
+      ];
+      for (const { key, ...filter } of cases) {
+        for (const badValue of [1, null, '']) {
+          expect(() => parseSearchFilters(JSON.stringify([{ ...filter, [key]: badValue }])))
+            .to.throw(new RegExp(`${key} must be a non-empty string`));
+        }
+      }
+    });
+
     it('requires the qualifier each resource field identifies by', function () {
       expect(() =>
         parseSearchFilters('[{"field":"apps.balance","op":"gt","value":1}]'),

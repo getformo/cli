@@ -98,14 +98,6 @@ function validateAnalyticsFilter(
   if (record.fields === undefined && (typeof record.field !== 'string' || record.field.length === 0)) {
     throw new Error(`${path} requires a non-empty string "field" or a "fields" pair`)
   }
-  for (const key of ['chain_id', 'app_id', 'token_address', 'scope', 'tag_id']) {
-    if (record[key] !== undefined && (typeof record[key] !== 'string' || record[key] === '')) {
-      throw new Error(`${path}.${key} must be a non-empty string`)
-    }
-  }
-  if (record.scope !== undefined && record.scope !== 'any' && record.scope !== 'protocol') {
-    throw new Error(`${path}.scope must be any or protocol`)
-  }
   validateQualifiers(record, typeof record.field === 'string' ? record.field : '', path)
   if (!isCanonicalFilterOperator(record.op)) {
     throw new Error(`${path} requires a canonical "op"`)

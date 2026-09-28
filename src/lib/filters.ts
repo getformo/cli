@@ -68,6 +68,14 @@ export function validateQualifiers(
   field: string,
   path = '--filters',
 ): void {
+  for (const key of QUALIFIER_KEYS) {
+    if (record[key] !== undefined && (typeof record[key] !== 'string' || record[key] === '')) {
+      throw new Error(`${path}.${key} must be a non-empty string`)
+    }
+  }
+  if (record.scope !== undefined && record.scope !== 'any' && record.scope !== 'protocol') {
+    throw new Error(`${path}.scope must be any or protocol`)
+  }
   const present = (key: string) => record[key] !== undefined
   const required = (key: string) => {
     if (!present(key)) {
