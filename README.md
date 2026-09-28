@@ -148,7 +148,8 @@ Merge-update identity properties on a wallet profile.
 
 | Option | Description |
 |---|---|
-| `--properties` | JSON object of properties to merge |
+| `--properties` | JSON object of properties to merge; use `null` to unset a property |
+| `--unset` | Comma-separated property keys to unset (`user_id` cannot be unset) |
 
 **Allowed property keys:** `user_id`, `display_name`, `email`, `farcaster`, `discord`, `twitter`, `telegram`, `instagram`, `website`, `github`, `linkedin`, `facebook`, `tiktok`, `youtube`, `reddit`, `avatar`, `description`, `location`, `ens`, `lens`, `basenames`, `linea`. Unknown keys are rejected server-side.
 
@@ -156,6 +157,8 @@ Merge-update identity properties on a wallet profile.
 formo profiles update 0xd8dA... --properties '{"display_name":"Vitalik","twitter":"VitalikButerin"}'
 formo profiles update vitalik.eth --properties '{"email":"alice@example.com"}'
 ```
+
+`--unset` takes precedence over matching keys in `--properties`. Deletions also mask enriched fallback values and historical snapshot reads until a new value is set.
 
 > Requires `profiles:write` scope.
 
@@ -351,7 +354,7 @@ Get a single tracked contract.
 | `--name` | Human-readable contract name |
 | `--abi` | Contract ABI as a JSON string; sent stringified to the API |
 | `--events` | JSON array of ABI event objects to monitor |
-| `--start-block` | Optional start block |
+| `--start-block` | Non-negative safe integer recorded on the contract; does not backfill historical events |
 | `--include-in-pipeline` | Deploy this contract to the events pipeline. Omit for decode-only (the default). |
 
 ```bash
@@ -367,7 +370,7 @@ formo contracts create --address 0x1f9840a85d5af5bf1d1762f925bdaddc4201f984 --ch
 | `--name` | Updated contract name |
 | `--abi` | Updated ABI |
 | `--events` | Updated JSON array of ABI event objects |
-| `--start-block` | Optional start block |
+| `--start-block` | Non-negative safe integer recorded on the contract; does not backfill historical events |
 | `--include-in-pipeline` | Deploy this contract to the events pipeline. Omit to keep the stored setting; pass `--include-in-pipeline=false` to exclude it. |
 
 
@@ -434,6 +437,12 @@ formo analytics retention --filters '[{"field":"location","op":"eq","value":"US"
 > Requires `query:read` scope. Run `formo analytics <pipe> --help` for the pipe-specific params accepted via `--params`.
 
 On `kpis`, `top_*`, `revenue_*` and `volume_by_metric`, `--params '{"page_scope":"session"}'` widens a `page` filter from page-scoped metrics (the default) to the legacy session scope.
+
+On user-aggregate pipes such as `lifecycle` and `frequency`, either-touch attribution filters can use a `fields` pair in place of `field`, e.g. `{"fields":["first_utm_source","last_utm_source"],"op":"eq","value":"twitter"}`.
+
+Overview Data source filters use `field: "channel"` with `web`, `mobile`, `api`, `import`, `server`, or `onchain`; acquisition channel uses `channel_type`. User/lifecycle source filters use `source_filter` through `--params` with `field: "source"`.
+
+Retention defaults to rolling (active in week N or later); use `--params '{"retention_type":"recurring"}'` for activity in exactly week N. Funnel steps accept `events` OR alternatives with member-level `filters`; the primary `type`/`event` is always included and step-level `filters` apply to the whole group.
 
 All user-attribute, profile, social, lifecycle and resource predicates go in the single `--filters` array, using the canonical envelope with named qualifiers (`chain_id`, `app_id`, `token_address`, `scope`, `tag_id`). The retired per-family params — `socials`, `chain_filters`, `app_filters`, `token_filters`, `label_filters`, `profile_filters`, `lifecycle_filter` — are rejected with a `400` if passed through `--params`.
 
@@ -549,7 +558,7 @@ Every command supports the standard incur output flags:
 | `--verbose` | Include the full envelope (`ok`, `data`, `meta`) |
 | `--filter-output <keys>` | Filter output by key paths (e.g. `data,meta.duration`) |
 
-Every list endpoint returns a `PaginatedResponse<T>` envelope: `{ data: [...], total, page, size, has_more }`. Every error follows: `{ error: { code, message, doc_url, param?, details? } }` — branch on `error.code`, not `message`.
+Every list endpoint returns a `PaginatedResponse<T>` envelope: `{ data: [...], total, page, size, has_more }`. Most API errors follow: `{ error: { code, message, doc_url, param?, details? } }` — branch on `error.code` when available. Event-ingestion errors can be `{error:"..."}`, and rate-limit responses can be plain text; HTTP status is authoritative.
 
 ---
 

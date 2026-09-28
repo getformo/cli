@@ -6,6 +6,7 @@ import {
   isCanonicalFilterValue,
   isEmptyMembershipArray,
   isValuelessFilterOperator,
+  validateQualifiers,
 } from '../lib/filters'
 import { parseJsonObject } from '../lib/json'
 
@@ -21,11 +22,11 @@ export const analytics = Cli.create('analytics', {
 const PIPES: Array<{ name: string; description: string }> = [
   { name: 'kpis', description: 'Traffic KPIs: visitors, pageviews, bounce rate, session duration' },
   { name: 'event_timeseries', description: 'Event counts over time' },
-  { name: 'funnel', description: 'Conversion funnel across ordered steps. --params: steps (JSON array of {type,event,name,filters?}), window_seconds, funnel_type, group_by, limit, attribution' },
+  { name: 'funnel', description: 'Conversion funnel across ordered steps. --params: steps (JSON array of {type,event,name,filters?,events?}; events adds OR alternatives with member filters), window_seconds, funnel_type, group_by, limit, attribution' },
   { name: 'flow', description: 'User path/flow analysis. --params: start_step / end_step (JSON {type,event,...}), global_filters, window_seconds, max_steps' },
   { name: 'frequency', description: 'Engagement frequency distribution' },
-  { name: 'lifecycle', description: 'User lifecycle stages (new, returning, power, resurrected, churned)' },
-  { name: 'retention', description: 'Retention cohort analysis (params: id_type, event_type, event_name, min_users)' },
+  { name: 'lifecycle', description: 'User lifecycle stages (New, Returning, Power user, At Risk, Churned, Resurrected)' },
+  { name: 'retention', description: 'Retention cohort analysis (params: retention_type — rolling by default or recurring, id_type, event_type, event_name, min_users)' },
   { name: 'revenue_overview', description: 'Revenue overview with optional breakdown (params: group_by — incl. channel_type and paid_source for ad network, rank_by)' },
   { name: 'revenue_by_metric', description: 'Revenue ranked by a metric column (params: metric_column — incl. channel and paid_source for ad network, limit, offset)' },
   { name: 'revenue_timeseries', description: 'Revenue over time (params: address)' },
@@ -58,8 +59,11 @@ const RESERVED_PARAM_KEYS = new Set([
   'filters',
 ])
 
-const ANALYTICS_FILTER_KEYS = new Set(['field', 'op', 'value', 'filters'])
-const ANALYTICS_NESTED_FILTER_KEYS = new Set(['field', 'op', 'value'])
+const ANALYTICS_FILTER_KEYS = new Set([
+  'field', 'fields', 'op', 'value', 'filters',
+  'chain_id', 'app_id', 'token_address', 'scope', 'tag_id',
+])
+const ANALYTICS_NESTED_FILTER_KEYS = new Set(['field', 'fields', 'op', 'value'])
 
 function validateAnalyticsFilter(
   filter: unknown,
@@ -79,12 +83,22 @@ function validateAnalyticsFilter(
     : ANALYTICS_NESTED_FILTER_KEYS
   if (Object.keys(record).some((key) => !allowedKeys.has(key))) {
     throw new Error(
-      `${path} may only contain field, op, value${allowNested ? ', and filters' : ''}`,
+      `${path} may only contain field, op, value, fields${allowNested ? ', filters, and resource qualifiers (chain_id, app_id, token_address, scope, tag_id)' : ''}`,
     )
   }
-  if (typeof record.field !== 'string' || record.field.length === 0) {
-    throw new Error(`${path} requires a non-empty string "field"`)
+  if (record.field !== undefined && record.fields !== undefined) {
+    throw new Error(`${path} must use only one of field or fields`)
   }
+  if (record.fields !== undefined && (
+    !Array.isArray(record.fields) || record.fields.length !== 2 ||
+    !record.fields.every((field) => typeof field === 'string' && field.length > 0)
+  )) {
+    throw new Error(`${path}.fields must name exactly two non-empty columns`)
+  }
+  if (record.fields === undefined && (typeof record.field !== 'string' || record.field.length === 0)) {
+    throw new Error(`${path} requires a non-empty string "field" or a "fields" pair`)
+  }
+  validateQualifiers(record, typeof record.field === 'string' ? record.field : '', path)
   if (!isCanonicalFilterOperator(record.op)) {
     throw new Error(`${path} requires a canonical "op"`)
   }
@@ -210,7 +224,7 @@ const sharedOptions = z.object({
     .optional()
     .describe(
       'JSON array of filter conditions: [{"field","op","value"}]. ' +
-        'Use op "in"/"nin" with an array value (e.g. ["chrome","firefox"]); pipe-delimited strings are also accepted. Array string members cannot contain "|".',
+        'Use op "in"/"nin" with an array value (e.g. ["chrome","firefox"]); pipe-delimited strings are also accepted. Array string members cannot contain "|". Resource filters accept chain_id, app_id, token_address, scope, and tag_id qualifiers.',
     ),
   params: z
     .string()

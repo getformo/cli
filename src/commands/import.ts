@@ -21,6 +21,7 @@ export function buildImportBody(options: ImportWalletsOptions) {
 
   if (options.rows) {
     const rows = parseJsonArrayOfObjects(options.rows, '--rows')
+    if (rows.length === 0) throw new Error('--rows must contain at least one wallet')
     const addresses = rows.map((row) => row.address)
     if (addresses.some((address) => typeof address !== 'string' || !address)) {
       throw new Error('--rows entries must each include a non-empty string address')
@@ -36,6 +37,7 @@ export function buildImportBody(options: ImportWalletsOptions) {
   }
 
   const addresses = parseJsonArray(options.addresses, '--addresses')
+  if (addresses.length === 0) throw new Error('--addresses must contain at least one wallet')
   if (addresses.some((address) => typeof address !== 'string' || !address)) {
     throw new Error('--addresses must be a JSON array of wallet address strings')
   }

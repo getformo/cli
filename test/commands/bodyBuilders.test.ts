@@ -224,6 +224,27 @@ describe('commands / body builders', function () {
     });
   });
 
+  describe('contract start-block validation', function () {
+    const base = { name: 'Token', abi: '[]', events: '[]' };
+    for (const startBlock of [-1, 1.5, Number.MAX_SAFE_INTEGER + 1, NaN, Infinity]) {
+      it(`rejects invalid start block ${startBlock} on create and update`, function () {
+        expect(() => buildCreateContractBody({ ...base, address: '0xabc', chain: 1, startBlock }))
+          .to.throw(/--start-block must be a non-negative safe integer/);
+        expect(() => buildUpdateContractBody('1', '0xabc', { ...base, startBlock }))
+          .to.throw(/--start-block must be a non-negative safe integer/);
+      });
+    }
+    it('preserves zero, the safe upper bound, and omitted start blocks', function () {
+      for (const startBlock of [0, Number.MAX_SAFE_INTEGER]) {
+        expect(buildCreateContractBody({ ...base, address: '0xabc', chain: 1, startBlock }))
+          .to.have.property('start_block', startBlock);
+        expect(buildUpdateContractBody('1', '0xabc', { ...base, startBlock }))
+          .to.have.property('start_block', startBlock);
+      }
+      expect(buildUpdateContractBody('1', '0xabc', base)).not.to.have.property('start_block');
+    });
+  });
+
   // ── Segments ──
 
   describe('buildCreateSegmentBody()', function () {
@@ -252,6 +273,11 @@ describe('commands / body builders', function () {
       expect(body).to.deep.equal({
         addresses: ['0xabc', '0xdef'],
       });
+    });
+
+    it('rejects empty imports before calling the API', function () {
+      expect(() => buildImportBody({ addresses: '[]' })).to.throw(/at least one wallet/);
+      expect(() => buildImportBody({ rows: '[]' })).to.throw(/at least one wallet/);
     });
 
     it('derives addresses from richer import rows', function () {
@@ -414,6 +440,22 @@ describe('commands / body builders', function () {
           '[{"field":"tokens.balance","op":"gt","value":1,"token_address":"0xabc","scope":"protocol","appId":"aave-v3"}]',
         ),
       ).to.throw(/unknown property "appId".*app_id/);
+    });
+
+    it('rejects non-string and empty qualifier values on profile searches', function () {
+      const cases = [
+        { field: 'chains.balance', op: 'gt', value: 0, key: 'chain_id' },
+        { field: 'apps.balance', op: 'gt', value: 0, key: 'app_id' },
+        { field: 'tokens.balance', op: 'gt', value: 0, scope: 'any', key: 'token_address' },
+        { field: 'tokens.balance', op: 'gt', value: 0, token_address: '0xabc', key: 'scope' },
+        { field: 'labels.value', op: 'eq', value: 'gold', key: 'tag_id' },
+      ];
+      for (const { key, ...filter } of cases) {
+        for (const badValue of [1, null, '']) {
+          expect(() => parseSearchFilters(JSON.stringify([{ ...filter, [key]: badValue }])))
+            .to.throw(new RegExp(`${key} must be a non-empty string`));
+        }
+      }
     });
 
     it('requires the qualifier each resource field identifies by', function () {

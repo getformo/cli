@@ -173,6 +173,8 @@ formo profiles properties batch --rows '[{"address":"0xabc...","display_name":"A
 
 > Requires `profiles:write` scope.
 
+Use `--unset email,twitter` or `--properties '{"email":null}'` to delete properties; `user_id` cannot be unset. `--unset` wins when the same key appears in `--properties`.
+
 ### Manage profile labels
 
 ```bash
@@ -252,6 +254,12 @@ formo analytics retention --filters '[{"field":"location","op":"eq","value":"US"
 Each pipe accepts pipe-specific params via `--params` (see each command's `--help`): e.g. `funnel` → `steps`, `window_seconds`, `funnel_type`, `group_by`, `limit`, `attribution`; `kpis` → `group_by`, `limit`; `revenue_overview` → `group_by`, `rank_by`, `limit`; `revenue_by_metric` / `volume_by_metric` → `metric_column`, `limit`, `offset`; `top_*` → `limit`, `offset`. The revenue pipes accept `paid_source` (acquiring ad network) for `group_by` / `metric_column`, alongside `channel_type` / `channel`.
 
 On `kpis`, `top_*`, `revenue_*` and `volume_by_metric`, `--params '{"page_scope":"session"}'` widens a `page` filter from page-scoped metrics (the default) to the legacy session scope.
+
+On user-aggregate pipes such as `lifecycle` and `frequency`, either-touch attribution filters can use a `fields` pair in place of `field`, e.g. `{"fields":["first_utm_source","last_utm_source"],"op":"eq","value":"twitter"}`.
+
+Overview Data source filters use `field: "channel"` with `web`, `mobile`, `api`, `import`, `server`, or `onchain`; acquisition channel uses `channel_type`. User/lifecycle source filters use `source_filter` through `--params` with `field: "source"`.
+
+Retention defaults to rolling (active in week N or later); use `--params '{"retention_type":"recurring"}'` for activity in exactly week N. Funnel steps accept `events` OR alternatives with member-level `filters`; the primary `type`/`event` is always included and step-level `filters` apply to the whole group.
 
 All user-attribute, profile, social, lifecycle and resource predicates now go in the single `--filters` array, using the same canonical envelope with named qualifiers (`chain_id`, `app_id`, `token_address`, `scope`, `tag_id`). The retired per-family params — `socials`, `chain_filters`, `app_filters`, `token_filters`, `label_filters`, `profile_filters`, `lifecycle_filter` — are rejected with a `400` if passed through `--params`.
 
@@ -529,7 +537,7 @@ formo contracts create --address <addr> --chain <chainId> --name <name> --abi '<
 | `--name` | Human-readable contract name |
 | `--abi` | Contract ABI as a JSON string |
 | `--events` | JSON array of ABI event objects to monitor |
-| `--start-block` | Optional start block |
+| `--start-block` | Non-negative safe integer recorded on the contract; does not backfill historical events |
 | `--include-in-pipeline` | Deploy this contract to the events pipeline. Omit for decode-only (the default). |
 
 > Requires `contracts:write` scope.

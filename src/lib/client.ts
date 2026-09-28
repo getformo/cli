@@ -17,7 +17,7 @@ export function getEventsBaseUrl() {
 }
 
 export interface ApiErrorBody {
-  error?: {
+  error?: string | {
     code?: string
     message?: string
     doc_url?: string
@@ -45,8 +45,14 @@ export interface DecoratedApiError extends Error {
 export function parseApiError(error: AxiosError): DecoratedApiError {
   const status = error.response?.status
   const body = error.response?.data as ApiErrorBody | undefined
-  const apiError = body?.error
-  const baseMessage = apiError?.message ?? error.message
+  const rawError = body?.error
+  const apiError = rawError && typeof rawError === 'object' ? rawError : undefined
+  const plainMessage = typeof rawError === 'string'
+    ? rawError
+    : typeof error.response?.data === 'string'
+      ? error.response.data
+      : undefined
+  const baseMessage = apiError?.message ?? plainMessage ?? error.message
   const parts: string[] = []
   parts.push(apiError?.code ? `[${apiError.code}] ${baseMessage}` : baseMessage)
   if (apiError?.param) parts.push(`Param: ${apiError.param}`)
