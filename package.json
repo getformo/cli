@@ -39,7 +39,7 @@
     "test:watch": "mocha --watch"
   },
   "dependencies": {
-    "axios": "^1.18.0",
+    "axios": "^1.20.0",
     "incur": "0.4.26"
   },
   "devDependencies": {
@@ -52,7 +52,7 @@
     "eslint": "^10.2.0",
     "globals": "^17.4.0",
     "mocha": "^11.7.5",
-    "tsx": "^4.21.0",
+    "tsx": "^4.22.0",
     "typescript": "^5.5.4",
     "typescript-eslint": "^8.58.1"
   }
