@@ -15,9 +15,13 @@ overrides:
   'form-data': '>=4.0.6 <5'
   # zod <4.4.0: prototype pollution + missing input validation
   # (AIKIDO-2026-10706/-10707; @modelcontextprotocol/server transitive).
+  # Raised to 4.6.0 for AIKIDO-2026-500926 and two related low advisories.
   'zod': '>=4.6.0 <5'
   # @toon-format/toon <2.3.1: prototype pollution (CVE-2026-82404, HIGH);
-  # yaml <2.9.1: DoS (AIKIDO-2026-683761). Both incur transitives.
+  # yaml <2.9.1: DoS (AIKIDO-2026-683761). Both incur transitives. These
+  # overrides only shape our own lockfile; the matching floors are also
+  # direct dependencies in package.json so npm consumers dedupe incur's
+  # ^2.x requests up to the patched releases.
   '@toon-format/toon': '>=2.3.1 <3'
   'yaml': '>=2.9.1 <3'
   # js-yaml <4.3.2, brace-expansion, @humanfs/node: parser/ReDoS advisories in
