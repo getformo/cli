@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -37,7 +37,7 @@ jobs:
         run: pnpm build
 
   lint:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     needs: build
     steps:
       - name: Checkout
@@ -64,7 +64,7 @@ jobs:
         run: pnpm typecheck
 
   test:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     needs: [build, lint]
     steps:
       - name: Checkout
@@ -97,7 +97,7 @@ jobs:
   # for `^2.0.0-alpha.2` of @modelcontextprotocol/server, the 2.0.0 stable
   # dropped an export it imports, and no job installed in a way that noticed.
   smoke:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     needs: [build, lint]
     steps:
       - name: Checkout
