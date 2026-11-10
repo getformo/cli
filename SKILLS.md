@@ -460,20 +460,26 @@ formo charts create --board-id <boardId> [--body '<json>' | typed chart options]
 | `--board-id` | Board ID to add the chart to |
 | `--body` | Full chart configuration as a JSON string |
 | `--title` | Chart title |
-| `--chart-type` | `table`, `number`, `funnel`, `bar`, `line`, `area`, `pie`, `stacked`, `user_paths`, `retention` |
-| `--query` | SQL query for SQL-backed charts |
-| `--x-axis` / `--y-axis` / `--group-by` | Chart encodings |
-| `--steps` | JSON array of funnel steps |
-| `--settings` | JSON settings object. User Paths require `anchors` and accept `maxSteps` / `nodesPerStep`; retention requires an `entryFilter` key |
+| `--description` | Optional chart description |
+| `--spec` | Full chart spec JSON: `{"version":1,"query":{...},"view":{...}}` |
+| `--sql` | SQL for a SQL chart (sets `spec.query` to `{"kind":"sql","sql":...}`) |
+| `--view` | View JSON (Vega-Lite subset): marks `bar`, `line`, `area`, `arc`, `text`, or `x-table`, `x-funnel`, `x-retention`, `x-sankey` |
+| `--settings` | JSON for `spec.query.settings`. Paths need `anchors` and accept `maxSteps` / `nodesPerStep`; retention needs an `entryFilter` key |
+
+`spec.query.kind` is `sql`, `funnel` (with `steps`, at least 2), `retention` or `paths`. Every column the view names must be returned by the SQL.
 
 > Requires `boards:write` scope.
 
 **Examples:**
 ```bash
-formo charts create --board-id board_abc123 \
-  --title "Daily active users" --chart-type line \
-  --query "SELECT toDate(timestamp) AS date, countDistinct(address) AS users FROM events GROUP BY date ORDER BY date" \
-  --x-axis date --y-axis users
+formo charts create --board-id board_abc123 --title "Daily active users" \
+  --sql "SELECT toDate(timestamp) AS date, countDistinct(address) AS users FROM events GROUP BY date ORDER BY date" \
+  --view '{"mark":"line","encoding":{"x":{"field":"date"},"y":{"field":"users"}}}'
+
+# Stacked bars: y.stack + color
+formo charts create --board-id board_abc123 --title "Users by chain" \
+  --sql "SELECT toDate(timestamp) AS date, chain_id, count() AS users FROM events GROUP BY date, chain_id" \
+  --view '{"mark":"bar","encoding":{"x":{"field":"date"},"y":{"field":"users","stack":true},"color":{"field":"chain_id"}}}'
 ```
 
 ### Update a chart

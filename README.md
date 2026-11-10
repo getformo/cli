@@ -301,26 +301,29 @@ Get a single chart by ID.
 List lightweight chart metadata without executing chart queries.
 
 ### `charts create --board-id <boardId> [options]`
-Create a chart from typed flags or a raw JSON body.
+Create a chart. A chart is `{ title, description, spec }`. The spec says what the chart computes (`query`: `sql`, `funnel`, `retention` or `paths`) and how it is drawn (`view`: a Vega-Lite subset with marks `bar`, `line`, `area`, `arc`, `text`, or `x-table`, `x-funnel`, `x-retention`, `x-sankey`). See [Create chart](https://docs.formo.so/api/boards/create-chart).
+
+Flags: `--title`, `--description`, `--spec '<json>'` (full spec), `--sql` (SQL chart query), `--view '<json>'`, `--settings '<json>'` (`spec.query.settings`), or a raw `--body '<json>'`. Typed flags override matching `--body` keys.
 
 ```bash
 formo charts create --board-id brd_123 --title "Daily Active Users" \
-  --chart-type line \
-  --query "SELECT toDate(timestamp) AS date, countDistinct(address) AS users FROM events GROUP BY date ORDER BY date" \
-  --x-axis date --y-axis users
+  --sql "SELECT toDate(timestamp) AS date, countDistinct(address) AS users FROM events GROUP BY date ORDER BY date" \
+  --view '{"mark":"line","encoding":{"x":{"field":"date"},"y":{"field":"users"}}}'
 
-formo charts create --board-id brd_123 --body '{"title":"Recent Events","chart_type":"table","query":"SELECT * FROM events LIMIT 10"}'
+formo charts create --board-id brd_123 --title "Recent Events" \
+  --sql "SELECT * FROM events LIMIT 10" --view '{"mark":"x-table"}'
 
 formo charts create --board-id brd_123 --title "Post-connect paths" \
-  --chart-type user_paths \
-  --settings '{"anchors":[{"type":"event","event":"connect"}],"maxSteps":5,"nodesPerStep":3}'
+  --spec '{"version":1,"query":{"kind":"paths","settings":{"anchors":[{"type":"event","event":"connect"}],"maxSteps":5,"nodesPerStep":3}},"view":{"mark":"x-sankey"}}'
 ```
 
 ### `charts update <chartId> --board-id <boardId> [options]`
-Update a chart. Accepts the same options as `create`: a raw `--body '<json>'` and/or typed flags (`--title`, `--chart-type`, `--query`, `--description`, `--x-axis`, `--y-axis`, `--group-by`, `--steps`, `--settings`). `--steps` is for funnel steps. User Paths use `--settings` with `anchors` and optional `maxSteps` / `nodesPerStep`; retention settings require an `entryFilter` key. Typed flags override matching `--body` keys.
+Update a chart. Accepts the same options as `create`. `--sql`, `--view` and `--settings` change one part of the current spec and keep the rest.
 
 ```bash
 formo charts update chart_abc123 --board-id brd_123 --title "Renamed chart"
+formo charts update chart_abc123 --board-id brd_123 \
+  --view '{"mark":"bar","encoding":{"x":{"field":"date"},"y":{"field":"users"}}}'
 ```
 
 ### `charts query <chartId> --board-id <boardId> --date-from <YYYY-MM-DD> --date-to <YYYY-MM-DD>`

@@ -1,10 +1,6 @@
 import { Cli, z } from 'incur'
 import { createClient, requireApiKey } from '../lib/client'
-import {
-  parseJsonArray,
-  parseJsonObject,
-  parseStringArray,
-} from '../lib/json'
+import { parseJsonObject, parseStringArray } from '../lib/json'
 import { stripTrailingFormatClause } from '../lib/sql'
 import {
   buildPaginationParams,
@@ -19,113 +15,121 @@ export const charts = Cli.create('charts', {
     'Chart commands — create, list, query, move, duplicate, reorder, update, and delete charts within boards',
 })
 
-const chartTypeSchema = z.enum([
-  'table',
-  'number',
-  'funnel',
-  'bar',
-  'line',
-  'area',
-  'pie',
-  'stacked',
-  'user_paths',
-  'retention',
-])
-
 // ── Shared chart body builder ──
+//
+// A chart is `{ title, description, spec }`. The spec says what the chart
+// computes (`spec.query`) and how it is drawn (`spec.view`, a Vega-Lite
+// subset). See https://docs.formo.so/api/boards/create-chart.
 
 export interface ChartBodyOptions {
   body?: string
-  query?: string
-  chartType?: string
   title?: string
   description?: string
-  xAxis?: string
-  yAxis?: string
-  groupBy?: string
-  steps?: string
+  spec?: string
+  sql?: string
+  view?: string
   settings?: string
 }
 
+const CHART_SPEC_VERSION = 1
+
 function hasTypedChartFields(options: ChartBodyOptions) {
   return [
-    options.query,
-    options.chartType,
     options.title,
     options.description,
-    options.xAxis,
-    options.yAxis,
-    options.groupBy,
-    options.steps,
+    options.spec,
+    options.sql,
+    options.view,
     options.settings,
   ].some((value) => value !== undefined)
 }
 
-export function buildChartBody(options: ChartBodyOptions) {
-  let body: Record<string, unknown> = {}
-
-  if (options.body) {
-    body = parseJsonObject(options.body, '--body')
-  }
-
+/**
+ * Build a chart body. `base` is the current chart for an update, so
+ * `--sql`, `--view` and `--settings` change one part of its spec and keep
+ * the rest. Order: base, then --body, then --spec, then the typed flags.
+ */
+export function buildChartBody(
+  options: ChartBodyOptions,
+  base: Record<string, unknown> = {},
+) {
   if (!options.body && !hasTypedChartFields(options)) {
     throw new Error(
-      'Provide --body or chart fields such as --title, --chart-type, and --query',
+      'Provide --body or chart fields such as --title, --spec, --sql and --view',
     )
   }
 
-  if (options.query !== undefined) {
-    body.query = stripTrailingFormatClause(options.query)
-  }
-  if (options.chartType !== undefined) body.chart_type = options.chartType
+  const body: Record<string, unknown> = { ...base }
+  if (options.body) Object.assign(body, parseJsonObject(options.body, '--body'))
+  if (options.spec !== undefined) body.spec = parseJsonObject(options.spec, '--spec')
   if (options.title !== undefined) body.title = options.title
   if (options.description !== undefined) body.description = options.description
-  if (options.xAxis !== undefined) body.x_axis = options.xAxis
-  if (options.yAxis !== undefined) {
-    body.y_axis = parseStringArray(options.yAxis, '--y-axis')
-  }
-  if (options.groupBy !== undefined) body.group_by = options.groupBy
-  if (options.steps !== undefined) {
-    body.steps = parseJsonArray(options.steps, '--steps')
-  }
-  if (options.settings !== undefined) {
-    body.settings = parseJsonObject(options.settings, '--settings')
+
+  if (
+    options.sql !== undefined ||
+    options.view !== undefined ||
+    options.settings !== undefined
+  ) {
+    const spec: Record<string, unknown> = {
+      version: CHART_SPEC_VERSION,
+      ...((body.spec as Record<string, unknown> | undefined) ?? {}),
+    }
+    if (options.sql !== undefined) {
+      const query = (spec.query as Record<string, unknown> | undefined) ?? {}
+      spec.query = {
+        ...(query.kind === 'sql' ? query : {}),
+        kind: 'sql',
+        sql: stripTrailingFormatClause(options.sql),
+      }
+    }
+    if (options.settings !== undefined) {
+      const query = (spec.query as Record<string, unknown> | undefined) ?? {}
+      spec.query = { ...query, settings: parseJsonObject(options.settings, '--settings') }
+    }
+    if (options.view !== undefined) spec.view = parseJsonObject(options.view, '--view')
+    body.spec = spec
   }
 
   return body
 }
 
-function coerceChartBody(input: string | ChartBodyOptions) {
-  return typeof input === 'string' ? buildChartBody({ body: input }) : buildChartBody(input)
+function coerceChartBody(
+  input: string | ChartBodyOptions,
+  base?: Record<string, unknown>,
+) {
+  return typeof input === 'string'
+    ? buildChartBody({ body: input }, base)
+    : buildChartBody(input, base)
 }
 
 const chartBodyOptions = z.object({
   body: z
     .string()
     .optional()
-    .describe('Raw JSON chart body. Typed flags below override matching body keys.'),
-  query: z
-    .string()
-    .optional()
-    .describe('SQL query powering table/number/bar/line/area/pie/stacked charts'),
-  chartType: chartTypeSchema.optional().describe('Chart type'),
+    .describe('Raw JSON chart body { title, description?, spec }. Typed flags below override matching keys.'),
   title: z.string().optional().describe('Chart title'),
   description: z.string().optional().describe('Optional chart description'),
-  xAxis: z.string().optional().describe('Column used as the x axis'),
-  yAxis: z
+  spec: z
     .string()
     .optional()
-    .describe('Comma-separated or JSON array of y-axis metric columns'),
-  groupBy: z.string().optional().describe('Column used to group or stack series'),
-  steps: z
+    .describe(
+      'Chart spec JSON: { "version": 1, "query": {...}, "view": {...} }. query.kind is sql, funnel, retention or paths; view is a Vega-Lite subset (bar, line, area, arc, text) or x-table, x-funnel, x-retention, x-sankey',
+    ),
+  sql: z
     .string()
     .optional()
-    .describe('JSON array of funnel step objects'),
+    .describe('SQL for a SQL chart: sets spec.query to { kind: "sql", sql }'),
+  view: z
+    .string()
+    .optional()
+    .describe(
+      'View JSON, for example {"mark":"line","encoding":{"x":{"field":"date"},"y":{"field":"users"}}}',
+    ),
   settings: z
     .string()
     .optional()
     .describe(
-      'JSON object of type-specific chart settings (for example, user_paths anchors/maxSteps/nodesPerStep or retention entryFilter/retentionFilter)',
+      'JSON object for spec.query.settings (for example, paths anchors/maxSteps/nodesPerStep or retention entryFilter/retentionFilter)',
     ),
 })
 
@@ -308,20 +312,17 @@ charts.command('create', {
       options: {
         boardId: 'board_abc123',
         title: 'Daily active users',
-        chartType: 'line',
-        query:
-          'SELECT toDate(timestamp) AS date, countDistinct(address) AS users FROM events GROUP BY date ORDER BY date',
-        xAxis: 'date',
-        yAxis: 'users',
+        sql: 'SELECT toDate(timestamp) AS date, countDistinct(address) AS users FROM events GROUP BY date ORDER BY date',
+        view: '{"mark":"line","encoding":{"x":{"field":"date"},"y":{"field":"users"}}}',
       },
-      description: 'Create a line chart from typed flags',
+      description: 'Create a line chart from SQL and a view',
     },
     {
       options: {
         boardId: 'board_abc123',
-        body: '{"title":"Onboarding Funnel","chart_type":"funnel","query":"SELECT 1","steps":[{"type":"event","event":"page"},{"type":"event","event":"connect"}]}',
+        body: '{"title":"Onboarding Funnel","spec":{"version":1,"query":{"kind":"funnel","steps":[{"type":"event","event":"page"},{"type":"event","event":"connect"}]},"view":{"mark":"x-funnel"}}}',
       },
-      description: 'Create a chart from raw JSON',
+      description: 'Create a funnel chart from raw JSON',
     },
   ],
   hint: 'Requires boards:write scope on your API key.',
@@ -339,13 +340,13 @@ export function updateChartRun(
 ) {
   requireApiKey()
   const client = createClient()
-  const updates = coerceChartBody(input)
+  // Validate the flags before any request (invalid JSON fails here).
+  coerceChartBody(input)
 
   // The charts endpoint only supports full-body PUT, so emulate a partial
-  // update by fetching the current chart and merging flags over it. Two
-  // consequences: a concurrent edit between the GET and PUT is overwritten,
-  // and fields can't be cleared via typed flags (nulls are normalized to
-  // undefined below) — use --body with explicit nulls to clear.
+  // update by fetching the current chart and applying the flags to it
+  // (--sql, --view and --settings change one part of the spec). A concurrent
+  // edit between the GET and PUT is overwritten.
   return client
     .get(
       `/v0/boards/${encodeURIComponent(boardId)}/charts/${encodeURIComponent(chartId)}`,
@@ -355,18 +356,11 @@ export function updateChartRun(
         current && typeof current === 'object'
           ? (current as Record<string, unknown>)
           : {}
-      const body = {
-        query: existing.query,
-        chart_type: existing.chart_type,
+      const body = coerceChartBody(input, {
         title: existing.title,
         description: existing.description ?? undefined,
-        x_axis: existing.x_axis ?? undefined,
-        y_axis: existing.y_axis ?? undefined,
-        group_by: existing.group_by ?? undefined,
-        steps: existing.steps ?? undefined,
-        settings: existing.settings ?? undefined,
-        ...updates,
-      }
+        spec: existing.spec,
+      })
 
       return client.put(
         `/v0/boards/${encodeURIComponent(boardId)}/charts/${encodeURIComponent(chartId)}`,
