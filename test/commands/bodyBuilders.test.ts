@@ -131,33 +131,63 @@ describe('commands / body builders', function () {
   // ── Charts ──
 
   describe('buildChartBody()', function () {
-    it('maps typed chart flags to snake_case body fields', function () {
+    const view = '{"mark":"line","encoding":{"x":{"field":"date"},"y":{"field":"users"}}}';
+
+    it('builds a SQL chart spec from --sql and --view', function () {
       const body = buildChartBody({
         title: 'Daily users',
-        chartType: 'line',
-        query: 'SELECT 1 FORMAT JSON',
-        xAxis: 'date',
-        yAxis: 'users,revenue',
-        groupBy: 'chain',
-        settings: '{"breakdown":"device"}',
+        sql: 'SELECT 1 FORMAT JSON',
+        view,
+        settings: '{"segmentId":"seg_1"}',
       });
       expect(body).to.deep.equal({
         title: 'Daily users',
-        chart_type: 'line',
-        query: 'SELECT 1',
-        x_axis: 'date',
-        y_axis: ['users', 'revenue'],
-        group_by: 'chain',
-        settings: { breakdown: 'device' },
+        spec: {
+          version: 1,
+          query: { kind: 'sql', sql: 'SELECT 1', settings: { segmentId: 'seg_1' } },
+          view: { mark: 'line', encoding: { x: { field: 'date' }, y: { field: 'users' } } },
+        },
+      });
+    });
+
+    it('takes a full --spec', function () {
+      const spec = { version: 1, query: { kind: 'funnel', steps: [] }, view: { mark: 'x-funnel' } };
+      expect(buildChartBody({ title: 'Funnel', spec: JSON.stringify(spec) })).to.deep.equal({
+        title: 'Funnel',
+        spec,
+      });
+    });
+
+    it('changes one part of the base spec on update', function () {
+      const base = {
+        title: 'Old',
+        spec: { version: 1, query: { kind: 'sql', sql: 'SELECT 1', settings: { segmentId: 'seg_1' } }, view: { mark: 'bar' } },
+      };
+      expect(buildChartBody({ view }, base)).to.deep.equal({
+        title: 'Old',
+        spec: {
+          version: 1,
+          query: { kind: 'sql', sql: 'SELECT 1', settings: { segmentId: 'seg_1' } },
+          view: { mark: 'line', encoding: { x: { field: 'date' }, y: { field: 'users' } } },
+        },
+      });
+      expect(buildChartBody({ sql: 'SELECT 2' }, base).spec).to.deep.equal({
+        version: 1,
+        query: { kind: 'sql', sql: 'SELECT 2', settings: { segmentId: 'seg_1' } },
+        view: { mark: 'bar' },
       });
     });
 
     it('merges raw --body with typed flags taking precedence', function () {
       const body = buildChartBody({
-        body: '{"title":"Old","chart_type":"bar"}',
+        body: '{"title":"Old","spec":{"version":1}}',
         title: 'New',
       });
-      expect(body).to.deep.equal({ title: 'New', chart_type: 'bar' });
+      expect(body).to.deep.equal({ title: 'New', spec: { version: 1 } });
+    });
+
+    it('needs --body or a chart field', function () {
+      expect(() => buildChartBody({})).to.throw(/--spec, --sql and --view/);
     });
   });
 
